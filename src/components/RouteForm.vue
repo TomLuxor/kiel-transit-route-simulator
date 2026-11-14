@@ -153,9 +153,9 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 				</select>
 			</div>
 		</div>
-		<fieldset class="kern-fieldset">
+		<fieldset class="kern-fieldset route-form__click-target">
 			<legend class="kern-label">
-				Ein Klick in die Karte wählt
+				Kartenklick wählt
 			</legend>
 			<div class="kern-fieldset__body kern-fieldset__body--horizontal">
 				<div
@@ -241,6 +241,21 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 	fill: var(--app-color-signal);
 	stroke: var(--app-color-on-signal);
 	stroke-width: 4;
+}
+
+/* Legend and choices in one row, to save height on phones. KERN floats the legend; the body goes beside it. */
+.route-form__click-target legend.kern-label {
+	margin: 0 var(--kern-metric-space-default) 0 0;
+}
+
+.route-form__click-target .kern-fieldset__body {
+	clear: none;
+	gap: var(--kern-metric-space-small);
+	width: auto;
+}
+
+.route-form__click-target .kern-form-check {
+	padding-right: 0;
 }
 
 /* In the action blue of the button label; through currentColor it follows Windows high contrast mode. */

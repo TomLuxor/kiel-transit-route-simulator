@@ -35,6 +35,9 @@ const routeDescription = computed(() => route.value && start.value && destinatio
 const ride = useRide(route, routeDescription)
 const { status: rideStatus, speed: rideSpeed, message: rideMessage, view: rideView, progress: rideProgress } = ride
 
+/** A ride is going on (not yet arrived): on small screens, the side panel shows only the ride. */
+const riding = computed(() => rideStatus.value === 'running' || rideStatus.value === 'paused')
+
 /** Dragging the map during a ride pauses it, so that the view does not jump back to the vehicle while the user looks around. */
 function onMapPan (): void {
 	ride.pause('Fahrt angehalten, weil die Karte verschoben wurde.')
@@ -115,9 +118,10 @@ function retry (): void {
 		</p>
 	</header>
 	<main class="app-main">
+		<!-- Only while loading or after an error; once the network is loaded, the message is left for screen readers. -->
 		<div
 			class="status-bar"
-			:class="`status-bar--${status}`"
+			:class="[`status-bar--${status}`, { 'app-visually-hidden': status === 'ready' }]"
 		>
 			<span
 				v-if="status === 'loading'"
@@ -166,6 +170,7 @@ function retry (): void {
 			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
 			<aside
 				class="side-panel"
+				:class="{ 'side-panel--riding': riding }"
 				aria-label="Verbindung und Linien"
 				tabindex="0"
 			>
@@ -181,20 +186,20 @@ function retry (): void {
 				<RouteSummary
 					:description="routeDescription"
 					:complete="start !== undefined && destination !== undefined"
-				>
-					<RideControls
-						v-if="route"
-						v-model:speed="rideSpeed"
-						:status="rideStatus"
-						:progress="rideProgress"
-						:length-meters="route.lengthMeters"
-						:message="rideMessage"
-						@start="ride.start"
-						@pause="ride.pause()"
-						@resume="ride.resume"
-						@stop="ride.stop('Fahrt beendet.')"
-					/>
-				</RouteSummary>
+					:current-leg="rideView?.state.legIndex"
+				/>
+				<RideControls
+					v-if="route"
+					v-model:speed="rideSpeed"
+					:status="rideStatus"
+					:progress="rideProgress"
+					:length-meters="route.lengthMeters"
+					:message="rideMessage"
+					@start="ride.start"
+					@pause="ride.pause()"
+					@resume="ride.resume"
+					@stop="ride.stop('Fahrt beendet.')"
+				/>
 				<LineLegend :lines="lines" />
 			</aside>
 		</div>
@@ -275,6 +280,13 @@ function retry (): void {
 	border-bottom: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
 }
 
+/* Hidden once the network is loaded (with app-visually-hidden); its own size would keep it 44 px high. */
+.status-bar--ready {
+	min-height: 0;
+	padding: 0;
+	border: 0;
+}
+
 .status-bar__message {
 	flex: 1 1 16rem;
 	margin: 0;
@@ -292,6 +304,8 @@ function retry (): void {
 
 /* Map and side panel: side by side on laptops and phones in landscape, the panel below the map in portrait. */
 .app-content {
+	/* Row 2 also when the status bar is hidden and takes no row. */
+	grid-row: 2;
 	display: grid;
 	grid-template-rows: minmax(0, 1fr) auto;
 	min-height: 0;
@@ -316,13 +330,40 @@ function retry (): void {
 @media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {
 	.app-content {
 		grid-template-rows: minmax(0, 1fr);
-		grid-template-columns: minmax(0, 1fr) clamp(16rem, 30vw, 24rem);
+		/* At least 18rem, so the two ride buttons fit side by side on a phone in landscape. */
+		grid-template-columns: minmax(0, 1fr) clamp(18rem, 34vw, 24rem);
 	}
 
 	.side-panel {
 		max-height: none;
 		border-top: none;
 		border-left: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	}
+}
+
+/*
+ * During a ride on a phone (portrait, or landscape with little height), the panel shows only the leg the
+ * vehicle is on and the ride controls, so the map keeps most of the screen. Everything comes back
+ * when the ride is stopped or arrives.
+ */
+@media (max-width: 47.99rem), (max-height: 37.5rem) {
+	.side-panel--riding .route-form,
+	.side-panel--riding .line-legend,
+	.side-panel--riding :deep(.route-summary__title),
+	.side-panel--riding :deep(.route-summary__total),
+	.side-panel--riding :deep(.route-summary__leg:not([aria-current])) {
+		display: none;
+	}
+}
+
+/* Little height (a phone in landscape): a narrower header leaves more of it to the map. */
+@media (max-height: 37.5rem) {
+	.app-header {
+		padding-block: var(--kern-metric-space-x-small);
+	}
+
+	.app-header__title {
+		font-size: var(--kern-typography-font-size-medium-static);
 	}
 }
 

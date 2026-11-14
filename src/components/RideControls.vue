@@ -55,12 +55,13 @@ async function onStop (): Promise<void> {
 </script>
 
 <template>
+	<!-- A bar at the bottom of the side panel: it stays in view while the panel scrolls, on phones too. -->
 	<div
 		class="ride-controls"
 		role="group"
 		aria-label="Fahrt"
 	>
-		<div class="ride-controls__buttons">
+		<div class="ride-controls__row">
 			<button
 				ref="mainButton"
 				class="kern-btn kern-btn--primary"
@@ -77,13 +78,36 @@ async function onStop (): Promise<void> {
 			>
 				<span class="kern-label">Beenden</span>
 			</button>
+			<div class="ride-controls__speed">
+				<label
+					class="kern-label"
+					for="ride-speed"
+				>
+					Tempo
+				</label>
+				<div class="kern-form-input__select-wrapper">
+					<select
+						id="ride-speed"
+						v-model="speed"
+						class="kern-form-input__select"
+					>
+						<option
+							v-for="option in SPEEDS"
+							:key="option.id"
+							:value="option.id"
+						>
+							{{ option.label }}
+						</option>
+					</select>
+				</div>
+			</div>
 		</div>
 		<div
 			v-if="status !== 'idle'"
 			class="kern-progress ride-controls__progress"
 		>
 			<label
-				class="kern-label"
+				class="kern-label kern-label--small"
 				for="ride-progress"
 			>
 				Gefahren: {{ travelled }}
@@ -96,33 +120,6 @@ async function onStop (): Promise<void> {
 				{{ travelled }}
 			</progress>
 		</div>
-		<fieldset class="kern-fieldset">
-			<legend class="kern-label">
-				Tempo
-			</legend>
-			<div class="kern-fieldset__body kern-fieldset__body--horizontal">
-				<div
-					v-for="option in SPEEDS"
-					:key="option.id"
-					class="kern-form-check"
-				>
-					<input
-						:id="`ride-speed-${option.id}`"
-						v-model="speed"
-						class="kern-form-check__radio"
-						type="radio"
-						name="ride-speed"
-						:value="option.id"
-					>
-					<label
-						class="kern-label"
-						:for="`ride-speed-${option.id}`"
-					>
-						{{ option.label }}
-					</label>
-				</div>
-			</div>
-		</fieldset>
 		<p
 			class="ride-controls__message"
 			role="status"
@@ -134,24 +131,60 @@ async function onStop (): Promise<void> {
 
 <style scoped>
 .ride-controls {
+	position: sticky;
+	bottom: calc(-1 * var(--kern-metric-space-default));
+	z-index: 1;
 	display: grid;
 	gap: var(--kern-metric-space-small);
-	margin-bottom: var(--kern-metric-space-small);
+
+	/* Across the full width of the panel, over its padding. */
+	margin: 0 calc(-1 * var(--kern-metric-space-default));
+	padding: var(--kern-metric-space-small) var(--kern-metric-space-default);
+	background: var(--kern-color-layout-background-default);
+	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
 }
 
-.ride-controls__buttons {
+.ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--kern-metric-space-small);
+	align-items: center;
+}
+
+.ride-controls__row .kern-btn {
+	margin: 0;
+}
+
+/* Label and list in one row, at the end of the bar. */
+.ride-controls__speed {
+	display: flex;
+	gap: var(--kern-metric-space-small);
+	align-items: center;
+	margin-left: auto;
+}
+
+.ride-controls__speed .kern-label {
+	margin: 0;
+}
+
+.ride-controls__speed .kern-form-input__select-wrapper {
+	width: 8rem;
 }
 
 /* KERN's progress bar reads "-contextual" tokens, which exist only inside KERN's layer containers. */
 .ride-controls__progress {
 	--kern-color-feedback-default-contextual: var(--kern-color-feedback-default);
 	--kern-color-feedback-default-background-contextual: var(--kern-color-feedback-default-background);
+
+	gap: var(--kern-metric-space-x-small);
+}
+
+.ride-controls__progress .kern-label {
+	margin: 0;
 }
 
 .ride-controls__message {
 	margin: 0;
+	font-size: var(--kern-font-size-14);
 }
 </style>

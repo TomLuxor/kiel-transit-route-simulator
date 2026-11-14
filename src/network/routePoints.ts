@@ -21,22 +21,29 @@ export interface RoutePoint {
 	readonly kind: 'place' | 'point'
 	/** The place ID, or an ID made from the coordinate for a point. */
 	readonly id: string
-	/** Name in the form and for screen readers, for example "Punkt auf Linie 2, 340 m von Belvedere entfernt". */
+	/** Name in the form: the place name, or "Punkt auf Linie 2" for a point. */
 	readonly name: string
+	/** For a point: where it lies, for example "340 m von Belvedere entfernt"; shown above its marker on the map. */
+	readonly nearby?: string
 	/** Point on the network in the map projection. */
 	readonly coordinate: Coordinate
 	/** Lines passing through the point, in the order of the line list. */
 	readonly lineIds: readonly LineId[]
 }
 
-/** "Linie 2", "Linien 1, 2 und 4" or "alle Linien". */
-export function describeLines (lineIds: readonly LineId[]): string {
+/** The name with where the point lies, for screen readers: "Punkt auf Linie 2, 340 m von Belvedere entfernt". */
+export function fullName (point: RoutePoint): string {
+	return point.nearby ? `${point.name}, ${point.nearby}` : point.name
+}
+
+/** "Linie 2", "Linien 1, 2 und 4", or "alle Linien" ("allen Linien" in the dative, as in "auf allen Linien"). */
+export function describeLines (lineIds: readonly LineId[], grammaticalCase: 'nominative' | 'dative' = 'nominative'): string {
 	const last = lineIds[lineIds.length - 1] ?? ''
 	if (lineIds.length <= 1) {
 		return `Linie ${last}`
 	}
 	if (lineIds.length === LINES.length) {
-		return 'alle Linien'
+		return grammaticalCase === 'dative' ? 'allen Linien' : 'alle Linien'
 	}
 	return `Linien ${lineIds.slice(0, -1).join(', ')} und ${last}`
 }
@@ -75,11 +82,11 @@ function linePoint (position: LinePosition, places: readonly ResolvedPlace[]): R
 	const onSameLine = places.filter(place => place.lineIds.some(lineId => position.lineIds.includes(lineId)))
 	const nearest = nearestPlace(onSameLine.length > 0 ? onSameLine : places, position.coordinate, distanceMeters)
 	const [x = 0, y = 0] = position.coordinate
-	const where = nearest ? `, ${formatDistance(nearest.distance)} von ${nearest.place.definition.name} entfernt` : ''
 	return {
 		kind: 'point',
 		id: `point-${x.toFixed(0)}-${y.toFixed(0)}`,
-		name: `Punkt auf ${describeLines(position.lineIds)}${where}`,
+		name: `Punkt auf ${describeLines(position.lineIds, 'dative')}`,
+		...(nearest ? { nearby: `${formatDistance(nearest.distance)} von ${nearest.place.definition.name} entfernt` } : {}),
 		coordinate: position.coordinate,
 		lineIds: position.lineIds,
 	}

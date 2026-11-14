@@ -14,4 +14,5 @@ export const BACKGROUND_WMS = {
 	attribution: '© <a href="https://basemap.de">GeoBasis-DE / BKG</a> (2026) <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>',
 } as const
 
-export const SECTIONS_ATTRIBUTION = 'Stadtbahn: © <a href="https://www.kiel.de/stadtbahn">Landeshauptstadt Kiel</a>, Amt für Bauordnung, Vermessung und Geoinformation, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>'
+/** As the WFS asks for it in its access constraints: "Landeshauptstadt Kiel, Lizenz CC-BY-4.0". */
+export const SECTIONS_ATTRIBUTION = 'Stadtbahn: © <a href="https://www.kiel.de/stadtbahn">Landeshauptstadt Kiel</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>'

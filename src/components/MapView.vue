@@ -17,7 +17,7 @@ import type { Route } from '@/routing/route'
 
 import { LINES } from '@/data/lines'
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
-import { createControls } from '@/map/controls'
+import { createControls, createFitControl } from '@/map/controls'
 import { createBackgroundLayer } from '@/map/layers'
 import { createLineLayer } from '@/map/lineLayer'
 import { animationDuration } from '@/map/motion'
@@ -68,16 +68,21 @@ function fitPadding (pixels: number): number[] {
 	return [pixels, pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
 }
 
+/** The whole network in view; animated when the user asks for it with the button. */
+function fitNetwork (duration = 0): void {
+	const extent = lineLayer.layer.getSource()?.getExtent()
+	if (map && extent && props.lines.length > 0) {
+		map.getView().fit(extent, { padding: fitPadding(32), duration })
+	}
+}
+
 function showNetwork (): void {
 	if (!props.network || props.lines.length === 0) {
 		return
 	}
 	lineLayer.showLines(props.network, props.lines)
 	placeLayer.showPlaces(props.places, props.lines)
-	const extent = lineLayer.layer.getSource()?.getExtent()
-	if (map && extent) {
-		map.getView().fit(extent, { padding: fitPadding(32) })
-	}
+	fitNetwork()
 }
 
 /** What a click at `coordinate` would choose at the current zoom. */
@@ -169,7 +174,9 @@ watch(() => props.ride, showRide)
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
-		controls: createControls(),
+		controls: createControls().extend([createFitControl(() => {
+			fitNetwork(animationDuration(600))
+		})]),
 		layers: [createBackgroundLayer(), lineLayer.layer, routeLayer.layer, placeLayer.layer, selectionLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
@@ -266,7 +273,8 @@ onBeforeUnmount(() => {
 
 /* Map buttons in the style of KERN secondary buttons, 44 px for comfortable touch targets. */
 .map-view :deep(.ol-zoom),
-.map-view :deep(.ol-rotate) {
+.map-view :deep(.ol-rotate),
+.map-view :deep(.app-fit) {
 	display: flex;
 	flex-direction: column;
 	gap: var(--kern-metric-space-x-small);
@@ -284,9 +292,16 @@ onBeforeUnmount(() => {
 	right: var(--kern-metric-space-small);
 }
 
+/* Below the two zoom buttons. */
+.map-view :deep(.app-fit) {
+	top: calc(2 * var(--kern-metric-space-small) + 2 * 44px + var(--kern-metric-space-x-small));
+	left: var(--kern-metric-space-small);
+}
+
 /* Only zoom and rotate: a broader selector would also show the attribution toggle that OpenLayers hides. */
 .map-view :deep(.ol-zoom button),
-.map-view :deep(.ol-rotate button) {
+.map-view :deep(.ol-rotate button),
+.map-view :deep(.app-fit button) {
 	display: grid;
 	place-items: center;
 	width: 44px;
@@ -303,19 +318,22 @@ onBeforeUnmount(() => {
 }
 
 .map-view :deep(.ol-zoom button:hover),
-.map-view :deep(.ol-rotate button:hover) {
+.map-view :deep(.ol-rotate button:hover),
+.map-view :deep(.app-fit button:hover) {
 	color: var(--kern-color-action-on-default);
 	background: var(--kern-color-action-default);
 	outline: none;
 }
 
 .map-view :deep(.ol-zoom button:focus),
-.map-view :deep(.ol-rotate button:focus) {
+.map-view :deep(.ol-rotate button:focus),
+.map-view :deep(.app-fit button:focus) {
 	outline: none;
 }
 
 .map-view :deep(.ol-zoom button:focus-visible),
-.map-view :deep(.ol-rotate button:focus-visible) {
+.map-view :deep(.ol-rotate button:focus-visible),
+.map-view :deep(.app-fit button:focus-visible) {
 	outline: var(--app-focus-outline);
 	outline-offset: 2px;
 }

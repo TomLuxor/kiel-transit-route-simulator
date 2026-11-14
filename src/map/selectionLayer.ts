@@ -4,7 +4,7 @@ import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import { Circle, Fill, Icon, Stroke, Style } from 'ol/style'
+import { Circle, Fill, Icon, Stroke, Style, Text } from 'ol/style'
 
 import type { LineDefinition, LineId } from '@/data/lines'
 import type { RoutePoint } from '@/network/routePoints'
@@ -52,6 +52,21 @@ function vehicleStyle (line: LineDefinition): Style {
 	return style
 }
 
+/** Where a point chosen on the map lies, in a box above its marker, so the list in the form can stay short. */
+function nearbyStyle (text: string): Style {
+	return new Style({
+		text: new Text({
+			text,
+			font: '500 14px "Fira Sans", sans-serif',
+			offsetY: -30,
+			fill: new Fill({ color: MAP_COLORS.ink }),
+			backgroundFill: new Fill({ color: MAP_COLORS.casing }),
+			backgroundStroke: new Stroke({ color: MAP_COLORS.ink, width: 1 }),
+			padding: [3, 6, 1, 6],
+		}),
+	})
+}
+
 function marker (coordinate: Coordinate, style: Style[]): Feature {
 	const feature = new Feature(new Point(coordinate))
 	feature.setStyle(style)
@@ -77,7 +92,7 @@ export function createSelectionLayer (): {
 		markers = changes.map(change => marker(change, MARKER_STYLES.change))
 		for (const [point, style] of [[start, MARKER_STYLES.start], [destination, MARKER_STYLES.destination]] as const) {
 			if (point) {
-				markers.push(marker(point.coordinate, style))
+				markers.push(marker(point.coordinate, point.nearby ? [...style, nearbyStyle(point.nearby)] : style))
 			}
 		}
 		source.addFeatures(markers)

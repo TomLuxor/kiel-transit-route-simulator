@@ -7,6 +7,8 @@ defineProps<{
 	description: RouteDescription | undefined
 	/** Start and destination are both chosen. */
 	complete: boolean
+	/** The leg the vehicle is on during a ride. */
+	currentLeg?: number | undefined
 }>()
 </script>
 
@@ -36,8 +38,6 @@ defineProps<{
 				Sobald Start und Ziel gewählt sind, steht hier die Verbindung.
 			</template>
 		</p>
-		<!-- The ride controls: right below the summary, so they are in view without scrolling the panel. -->
-		<slot />
 		<ol
 			v-if="description"
 			class="route-summary__legs"
@@ -46,6 +46,7 @@ defineProps<{
 				v-for="(leg, index) in description.legs"
 				:key="index"
 				class="route-summary__leg"
+				:aria-current="index === currentLeg ? 'step' : undefined"
 			>
 				<LineBadge :line="leg.line" />
 				<div>
@@ -96,6 +97,15 @@ defineProps<{
 	display: flex;
 	gap: var(--kern-metric-space-small);
 	align-items: flex-start;
+}
+
+/* During a ride, the leg the vehicle is on. */
+.route-summary__leg[aria-current="step"] {
+	margin: calc(-1 * var(--kern-metric-space-x-small)) calc(-1 * var(--kern-metric-space-small));
+	padding: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
+	background: var(--kern-color-layout-background-hued);
+	border-radius: var(--kern-metric-border-radius-default);
+	outline: 2px solid transparent;
 }
 
 .route-summary__line {

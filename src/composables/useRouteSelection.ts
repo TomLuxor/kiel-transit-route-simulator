@@ -1,6 +1,6 @@
 import { ref, shallowRef } from 'vue'
 
-import { isSamePoint, type RoutePoint } from '@/network/routePoints'
+import { fullName, isSamePoint, type RoutePoint } from '@/network/routePoints'
 
 import { useAnnouncer } from './useAnnouncer'
 
@@ -49,7 +49,7 @@ export function useRouteSelection () {
 		const endpoint = clickTarget.value
 		if (choose(endpoint, point)) {
 			const next = clickTarget.value === endpoint ? '' : ` Der nächste Klick in die Karte wählt ${ENDPOINT_WORDS[clickTarget.value].accusative}.`
-			announce(`${ENDPOINT_WORDS[endpoint].title}: ${point.name}.${next}`)
+			announce(`${ENDPOINT_WORDS[endpoint].title}: ${fullName(point)}.${next}`)
 		}
 	}
 

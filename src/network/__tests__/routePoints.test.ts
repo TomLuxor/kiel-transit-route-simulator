@@ -15,6 +15,10 @@ describe('names of points', () => {
 		expect(describeLines(lineIds)).toBe(text)
 	})
 
+	it('uses the dative after "auf": Punkt auf allen Linien', () => {
+		expect(describeLines(['1', '2', '3', '4'], 'dative')).toBe('allen Linien')
+	})
+
 	it.each([
 		[4, '0 m'],
 		[337, '340 m'],
@@ -37,7 +41,8 @@ describe('choosing a point with a click', () => {
 		const point = pickPoint(lines, places, farFromPlaces(), 1)
 		expect(point).toMatchObject({ kind: 'point', lineIds: ['2'] })
 		// The point farthest from all places lies between Wik and Belvedere.
-		expect(point?.name).toMatch(/^Punkt auf Linie 2, [\d,]+ k?m von (Wik|Belvedere) entfernt$/)
+		expect(point?.name).toBe('Punkt auf Linie 2')
+		expect(point?.nearby).toMatch(/^[\d,]+ k?m von (Wik|Belvedere) entfernt$/)
 	})
 
 	it('reaches a line from up to 20 pixels away, at any zoom', () => {

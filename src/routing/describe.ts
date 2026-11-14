@@ -3,7 +3,7 @@ import type { ResolvedLine } from '@/network/lines'
 import type { ResolvedPlace } from '@/network/places'
 
 import { itemAt } from '@/network/graph'
-import { formatDistance, routePointAt, type RoutePoint } from '@/network/routePoints'
+import { formatDistance, fullName, routePointAt, type RoutePoint } from '@/network/routePoints'
 
 import type { Route } from './route'
 
@@ -37,13 +37,14 @@ function describeChanges (changes: number): string {
 
 /**
  * Names the legs of a route: places by their names, the changes by the place where they happen. A point
- * chosen on the map is "Startpunkt" or "Zielpunkt" here; its long name ("Punkt auf Linie 2, 1,1 km von Wik
- * entfernt") already stands in the form and would make the sentences hard to follow.
+ * chosen on the map is "Startpunkt" or "Zielpunkt" here; where it lies stands in the form and above its
+ * marker, and would make the sentences hard to follow.
  */
 export function describeRoute (route: Route, start: RoutePoint, destination: RoutePoint, lines: readonly ResolvedLine[], places: readonly ResolvedPlace[]): RouteDescription {
 	const changeNames = route.legs.slice(0, -1).map(leg => {
 		const end = itemAt(leg.coordinates, leg.coordinates.length - 1)
-		return routePointAt(lines, places, end)?.name ?? 'einem unbenannten Punkt'
+		const point = routePointAt(lines, places, end)
+		return point ? fullName(point) : 'unbenannter Punkt'
 	})
 	const froms = [start.kind === 'point' ? 'vom Startpunkt' : `von ${start.name}`, ...changeNames.map(name => `von ${name}`)]
 	const tos = [...changeNames.map(name => `bis ${name}`), destination.kind === 'point' ? 'bis zum Zielpunkt' : `bis ${destination.name}`]

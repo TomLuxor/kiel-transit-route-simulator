@@ -141,10 +141,16 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 ## Step 7: Layout and responsive design
 
-- [ ] Semantic structure: `header`, `main`, `aside` for controls and legend, `footer` for sources.
-- [ ] CSS grid: map with a side panel on a laptop and on a phone in landscape; the panel below the map on a phone in portrait (media queries on width and orientation, `dvh` units).
-- [ ] Prefer CSS over JavaScript, for example `<details>` for a collapsible panel. OpenLayers 10 watches the size of the map element itself, so the map follows CSS layout changes without extra code.
-- [ ] Test on a phone in portrait and landscape and on a laptop (a real phone and the DevTools device mode).
+- [x] Semantic structure: `header`, `main`, an `aside` with the form, the route and the legend as labelled sections. No `footer` for the sources: they stay in the map, where CC BY and the BKG's source note ask for them, and the Stadtbahn credit is now as short as the WFS words it ("Landeshauptstadt Kiel, Lizenz CC-BY-4.0"), one line on a laptop.
+- [x] CSS grid: map with a side panel on a laptop and on a phone in landscape (`clamp(18rem, 34vw, 24rem)`, wide enough for two buttons side by side); the panel below the map on a phone in portrait (at most 40 % of the height, `dvh`). OpenLayers 10 follows the size changes by itself.
+- [x] The status bar shows only while loading or after an error. Once loaded, its message stays in the page for screen readers ("Stadtbahnnetz geladen …") but takes no space: 44 px more map.
+- [x] The ride controls are a bar at the bottom of the side panel (`position: sticky`), so "Fahrt starten" and "Anhalten" are always reachable, on phones too; the speed is a list, so the bar stays low.
+- [x] During a ride on a phone (narrower than 48rem, or lower than 37.5rem), the panel shows only the leg the vehicle is on and the ride bar; the form, the legend and the summary come back when the ride stops or arrives. Pure CSS: a class on the panel and a media query. The current leg is marked with `aria-current="step"` on every screen.
+- [x] A point chosen on the map is "Punkt auf Linie 2" in the list; where it lies ("1,1 km von Wik entfernt") stands in a box above its marker. Screen readers still hear the full description when the point is chosen. Also fixed: "Punkt auf allen Linien" (dative).
+- [x] The choice of what a map click sets is one row ("Kartenklick wählt: Start / Ziel").
+- [x] A button below the zoom buttons shows the whole network again, for example after a ride.
+- [x] Checked in Chrome's device emulation at 1920 × 1080, 1280 × 800, 390 × 844 (phone portrait) and 844 × 390 (phone landscape), light and dark.
+- [ ] Test on a real phone in portrait and landscape.
 
 ## Step 8: Accessibility
 
@@ -167,8 +173,8 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Requirement | Where | Status |
 | --- | --- | --- |
 | HTML: semantic tags, tabs, consistent self-closing tags | templates and `index.html`, checked by ESLint | set up |
-| CSS: responsive, tested on phone (portrait, landscape) and laptop | step 7 | open |
-| CSS preferred over JavaScript | step 7 | open |
+| CSS: responsive, tested on phone (portrait, landscape) and laptop | step 7; device emulation done, real phone open | started |
+| CSS preferred over JavaScript | step 7: layouts, ride mode, sticky ride bar and hidden status bar in CSS | done |
 | Typed TypeScript, no `any` | strict `tsconfig`, `typescript-eslint` strict type-checked rules | set up |
 | Git, public on GitHub | this repository | done |
 | ESLint `@dataport/eslint-config-geodev` | `eslint.config.ts` | done |
