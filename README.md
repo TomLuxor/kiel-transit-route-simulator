@@ -15,7 +15,7 @@ Kiel is planning a light rail system (Stadtbahn). This application shows the pla
 | Stadtbahn planning layers (variants, road works, areas per section) | WMS ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/Stadtbahn_WMS/MapServer/WMSServer?service=WMS&request=GetCapabilities)) | © Landeshauptstadt Kiel |
 | Line network (which line runs on which sections) | *Trassenstudie für ein zukunftssicheres ÖPNV-System auf eigener Trasse*, final report, October 2022, section 2.3 ([PDF](https://www.kiel.de/de/umwelt_verkehr/_dokumente_kiel_bewegt_sich/endbericht/kiel_oepnv_system_endbericht_trassenstudie_fuer_ein_zukunftssicheres_oepnv_system_auf_eigener_trasse.pdf)) | Landeshauptstadt Kiel |
 
-No public service publishes the lines themselves or the stops. The application therefore builds the four lines from the route sections, following the line network of the final report.
+No public service publishes the lines themselves or the stops. The application therefore builds a network graph from the route sections and lays the four lines of the final report onto it; their computed lengths match the official ones within 1.6 %. Start and destination can be any point on a line, or one of 23 named places (line ends, branch points and well-known places, not stops). Three of the place coordinates (CAU, Alfons-Jonas-Platz, Kurt-Schumacher-Platz) come from [OpenStreetMap](https://www.openstreetmap.org/copyright) (© OpenStreetMap contributors, ODbL), and the place names were checked against it.
 
 ## Tech stack
 
@@ -58,6 +58,8 @@ Then open the address that Vite prints, by default <http://localhost:5173>.
 | `npm run dev` | Start the development server with hot reload |
 | `npm run build` | Type-check and build for production into `dist/` |
 | `npm run preview` | Serve the production build locally |
+| `npm test` | Run the unit tests once (Vitest) |
+| `npm run test:watch` | Run the unit tests on every change |
 | `npm run lint` | Check the code with ESLint |
 | `npm run lint:fix` | Fix the ESLint findings that can be fixed automatically |
 | `npm run type-check` | Check the types with `vue-tsc` |

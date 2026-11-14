@@ -3,6 +3,8 @@ import type { ProjectionLike } from 'ol/proj'
 import GeoJSON from 'ol/format/GeoJSON'
 import MultiLineString from 'ol/geom/MultiLineString'
 
+import type { NetworkPart } from './graph'
+
 /** WFS of the city of Kiel with the planned Stadtbahn route sections (open data, CC BY 4.0). */
 const SECTIONS_WFS_URL = 'https://ims.kiel.de/geodatenextern/services/Stadtplan/LHKielWmsWfs/MapServer/WFSServer'
 const SECTIONS_TYPE_NAME = 'lhkiel:Trassenabschnitte'
@@ -62,19 +64,29 @@ export async function fetchSections (featureProjection: ProjectionLike, signal?:
 		if (signal?.aborted) {
 			throw error
 		}
-		throw new Error('The map server of the City of Kiel could not be reached.', { cause: error })
+		throw new Error('The map server of the City of Kiel could not be reached.')
 	})
 	if (!response.ok) {
 		throw new Error(`The map server of the City of Kiel answered with an error (status ${String(response.status)}).`)
 	}
 	const data: unknown = await response.json()
+	return readSections(data, featureProjection)
+}
+
+/** Checks a GeoJSON answer of the WFS (in EPSG:4326) and turns it into sections in `featureProjection`. */
+export function readSections (data: unknown, featureProjection: ProjectionLike): Section[] {
 	if (!isRecord(data)) {
 		throw new Error('The WFS did not answer with GeoJSON.')
 	}
-
 	const features = new GeoJSON().readFeatures(data, { dataProjection: 'EPSG:4326', featureProjection })
 	if (features.length === 0) {
 		throw new Error('The WFS returned no route sections.')
 	}
 	return features.map(feature => parseSection(feature.getProperties(), feature.getGeometry()))
+}
+
+/** The line parts of all sections, as input for the network graph. */
+export function sectionParts (sections: readonly Section[]): NetworkPart[] {
+	return sections.flatMap(section => section.geometry.getLineStrings()
+		.map(lineString => ({ sectionId: section.id, coordinates: lineString.getCoordinates() })))
 }

@@ -78,9 +78,10 @@ Goal: a typed description of the lines that the rest of the application builds o
 Done after step 2, because the map is the tool for checking the data:
 
 - [x] Draw the 16 WFS features with their `Name` and `ogr_fid` on the map and confirm the section table above (labels show in development mode only).
-- [ ] Build the network graph from the sections (`src/network/`): split every line part where another part's end touches it, snap end points within about 60 m, nodes at ends and junctions, edges with length and coordinates. This is the first half of step 5, moved forward.
-- [ ] Write `src/data/lines.ts`: each line defined by its two ends and, where needed, a via point (`LineDefinition { id, name, color, waypoints: Coordinate[] }`). The line's geometry is the shortest path through the graph between its waypoints, so the official WFS stays the only geometry source.
-- [ ] Write `src/data/places.ts`: the named places, each a coordinate on the network and a name taken from the route study.
+- [x] Build the network graph from the sections (`src/network/graph.ts`): split every line part where another part's end touches it, join ends within 60 m, nodes at ends and junctions, edges with length and coordinates. Result: 27 nodes, 27 edges. This is the first half of step 5, moved forward.
+- [x] Write `src/data/lines.ts`: each line defined by its two ends (`waypoints`); `src/network/lines.ts` lays it onto the graph as the shortest path between them. Computed lengths: line 1 15.67 km (official 15.7), line 2 13.16 km (13.2), line 3 15.55 km (15.6), line 4 9.65 km (9.5). The colors follow in step 3.
+- [x] Write `src/data/places.ts`: 23 named places (line ends, branch points, section boundaries, CAU, Alfons-Jonas-Platz, Kurt-Schumacher-Platz). Names checked against the stop lists and OpenStreetMap; `src/network/places.ts` moves each onto the nearest line and computes which lines serve it.
+- [x] Unit tests with Vitest (`npm test`) on a snapshot of the WFS: the line lengths, the shared trunk from Andreas-Gayk-Straße to Karlstal, no depot track in any line, no shortcuts off the track, and the lines serving each place.
 
 ## Step 2: Map with WMS and WFS
 
@@ -114,7 +115,7 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 - [ ] Insert start and destination into the graph by splitting the edge they lie on.
 - [ ] Dijkstra over (node, line) pairs with a penalty for every change of line, so that routes with fewer changes win.
 - [ ] Result: a list of legs `{ lineId, coordinates, lengthMeters }` and the transfer points.
-- [ ] Recommended: add Vitest and test the cases same line, one change, two changes, and start on a junction.
+- [ ] Tests (Vitest is set up since step 1): same line, one change, two changes, and start on a junction.
 
 ## Step 6: Simulating the ride
 
