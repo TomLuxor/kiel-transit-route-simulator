@@ -17,11 +17,11 @@ describe('choosing start and destination', () => {
 		selection.chooseOnMap(a)
 		expect(selection.start.value).toBe(a)
 		expect(selection.clickTarget.value).toBe('destination')
-		expect(selection.message.value).toBe('Start: A. A click on the map now sets the destination.')
+		expect(selection.message.value).toBe('Start: A. Der nächste Klick in die Karte wählt das Ziel.')
 
 		selection.chooseOnMap(b)
 		expect(selection.destination.value).toBe(b)
-		expect(selection.message.value).toBe('Destination: B.')
+		expect(selection.message.value).toBe('Ziel: B.')
 
 		// Further clicks replace the destination until the user picks the start in the form.
 		selection.chooseOnMap(c)
@@ -40,7 +40,7 @@ describe('choosing start and destination', () => {
 		selection.choose('start', a)
 		expect(selection.choose('destination', a)).toBe(false)
 		expect(selection.destination.value).toBeUndefined()
-		expect(selection.message.value).toBe('That is where the start is. Choose another destination.')
+		expect(selection.message.value).toBe('Dort liegt schon der Start. Bitte ein anderes Ziel wählen.')
 	})
 
 	it('swaps start and destination and then targets the empty one', () => {

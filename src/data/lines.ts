@@ -38,7 +38,7 @@ export interface LineDefinition {
 export const LINES: readonly LineDefinition[] = [
 	{
 		id: '1',
-		name: 'Line 1',
+		name: 'Linie 1',
 		route: 'HAW Kiel – Wellingdorf – Gaarden – Hauptbahnhof – Holtenauer Straße – CAU – Suchsdorf',
 		officialLengthKm: 15.7,
 		waypoints: [[10.1782, 54.3325], [10.0763, 54.3618]],
@@ -47,7 +47,7 @@ export const LINES: readonly LineDefinition[] = [
 	},
 	{
 		id: '2',
-		name: 'Line 2',
+		name: 'Linie 2',
 		route: 'Elmschenhagen – Preetzer Straße – Gaarden – Hauptbahnhof – Holtenauer Straße – Wik',
 		officialLengthKm: 13.2,
 		waypoints: [[10.1943, 54.2888], [10.1312, 54.3659]],
@@ -56,7 +56,7 @@ export const LINES: readonly LineDefinition[] = [
 	},
 	{
 		id: '3',
-		name: 'Line 3',
+		name: 'Linie 3',
 		route: 'Dietrichsdorf – Wellingdorf – Gaarden-Ost – Hauptbahnhof – Kronshagener Weg – Mettenhof',
 		officialLengthKm: 15.6,
 		waypoints: [[10.1951, 54.3364], [10.0491, 54.3162]],
@@ -65,7 +65,7 @@ export const LINES: readonly LineDefinition[] = [
 	},
 	{
 		id: '4',
-		name: 'Line 4',
+		name: 'Linie 4',
 		route: 'Berufsbildungszentrum Gaarden – Hauptbahnhof – Holtenauer Straße – CAU – Projensdorf',
 		officialLengthKm: 9.5,
 		waypoints: [[10.1620, 54.3051], [10.1133, 54.3564]],

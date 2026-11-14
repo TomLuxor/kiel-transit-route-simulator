@@ -11,6 +11,7 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import type { Network } from '@/network/graph'
 import type { ResolvedLine } from '@/network/lines'
 import type { ResolvedPlace } from '@/network/places'
+import type { Route } from '@/routing/route'
 
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
 import { createControls } from '@/map/controls'
@@ -18,6 +19,7 @@ import { createBackgroundLayer } from '@/map/layers'
 import { createLineLayer } from '@/map/lineLayer'
 import { animationDuration } from '@/map/motion'
 import { createPlaceLayer } from '@/map/placeLayer'
+import { createRouteLayer, DIMMED_LINE_OPACITY } from '@/map/routeLayer'
 import { createSelectionLayer } from '@/map/selectionLayer'
 import { pickPoint, type RoutePoint } from '@/network/routePoints'
 
@@ -27,6 +29,7 @@ const props = defineProps<{
 	places: readonly ResolvedPlace[]
 	start: RoutePoint | undefined
 	destination: RoutePoint | undefined
+	route: Route | undefined
 }>()
 
 const emit = defineEmits<{
@@ -43,9 +46,16 @@ const REVEAL_MARGIN_PIXELS = 16
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
 const lineLayer = createLineLayer()
+const routeLayer = createRouteLayer()
 const placeLayer = createPlaceLayer()
 const selectionLayer = createSelectionLayer()
 let map: OlMap | undefined
+
+/** Padding for fitting the view, in pixels; the attributions cover the bottom of the map, more so on phones. */
+function fitPadding (pixels: number): number[] {
+	const attribution = mapElement.value?.querySelector<HTMLElement>('.ol-attribution')
+	return [pixels, pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
+}
 
 function showNetwork (): void {
 	if (!props.network || props.lines.length === 0) {
@@ -55,7 +65,7 @@ function showNetwork (): void {
 	placeLayer.showPlaces(props.places, props.lines)
 	const extent = lineLayer.layer.getSource()?.getExtent()
 	if (map && extent) {
-		map.getView().fit(extent, { padding: [32, 32, 32, 32] })
+		map.getView().fit(extent, { padding: fitPadding(32) })
 	}
 }
 
@@ -81,16 +91,36 @@ function reveal (point: RoutePoint | undefined): void {
 
 watch(() => [props.network, props.lines, props.places], showNetwork)
 
-watch(() => [props.start, props.destination] as const, ([start, destination], [previousStart]) => {
-	selectionLayer.showSelection(start, destination)
-	reveal(start === previousStart ? destination : start)
+/** Zooms to the whole route, or as far as needed to show it. */
+function fitRoute (): void {
+	const extent = routeLayer.layer.getSource()?.getExtent()
+	if (map && extent) {
+		map.getView().fit(extent, { padding: fitPadding(48), maxZoom: 16, duration: animationDuration(600) })
+	}
+}
+
+/** Start, destination and route: markers, the route over the dimmed lines, and the view on what changed. */
+function showSelection (previousStart?: RoutePoint): void {
+	const changes = (props.route?.legs ?? []).slice(1).map(leg => leg.coordinates[0]).filter(coordinate => coordinate !== undefined)
+	selectionLayer.showSelection(props.start, props.destination, changes)
+	routeLayer.showRoute(props.route)
+	lineLayer.layer.setOpacity(props.route ? DIMMED_LINE_OPACITY : 1)
+	if (props.route) {
+		fitRoute()
+	} else {
+		reveal(props.start === previousStart ? props.destination : props.start)
+	}
+}
+
+watch(() => [props.start, props.destination, props.route] as const, (_, [previousStart]) => {
+	showSelection(previousStart)
 })
 
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
 		controls: createControls(),
-		layers: [createBackgroundLayer(), lineLayer.layer, placeLayer.layer, selectionLayer.layer],
+		layers: [createBackgroundLayer(), lineLayer.layer, routeLayer.layer, placeLayer.layer, selectionLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
 			center: fromLonLat(KIEL_CENTER, MAP_PROJECTION),
@@ -109,7 +139,7 @@ onMounted(() => {
 		}
 	})
 	showNetwork()
-	selectionLayer.showSelection(props.start, props.destination)
+	showSelection(props.start)
 })
 
 onBeforeUnmount(() => {
@@ -125,7 +155,7 @@ onBeforeUnmount(() => {
 			ref="mapTarget"
 			class="map"
 			role="region"
-			aria-label="Map of the planned Stadtbahn network in Kiel"
+			aria-label="Karte des geplanten Stadtbahnnetzes in Kiel"
 			aria-describedby="map-help"
 			tabindex="0"
 		/>
@@ -133,8 +163,8 @@ onBeforeUnmount(() => {
 			id="map-help"
 			class="kern-sr-only"
 		>
-			A click or tap on a line chooses the start or the destination; the route form offers the same choice by keyboard.
-			When the map has focus, the arrow keys move the map and the plus and minus keys zoom.
+			Ein Klick oder Tippen auf eine Linie wählt Start oder Ziel; das Formular „Start und Ziel“ bietet dieselbe Auswahl per Tastatur.
+			Wenn die Karte den Fokus hat, verschieben die Pfeiltasten die Karte, Plus und Minus zoomen.
 		</p>
 	</div>
 </template>

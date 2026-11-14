@@ -4,11 +4,15 @@ import { computed, useTemplateRef } from 'vue'
 import LineLegend from '@/components/LineLegend.vue'
 import MapView from '@/components/MapView.vue'
 import RouteForm from '@/components/RouteForm.vue'
+import RouteSummary from '@/components/RouteSummary.vue'
 import { useNetwork } from '@/composables/useNetwork'
 import { useRouteSelection } from '@/composables/useRouteSelection'
 import { type LoadStatus, useSections } from '@/composables/useSections'
 import { MAP_PROJECTION } from '@/map/config'
 import { itemAt } from '@/network/graph'
+import { formatDistance } from '@/network/routePoints'
+import { describeRoute } from '@/routing/describe'
+import { findRoute } from '@/routing/route'
 
 const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
 const model = useNetwork(sections)
@@ -19,18 +23,25 @@ const network = computed(() => model.value.state === 'ready' ? model.value.netwo
 const lines = computed(() => model.value.state === 'ready' ? model.value.lines : [])
 const places = computed(() => model.value.state === 'ready' ? model.value.places : [])
 
+const route = computed(() => network.value && start.value && destination.value
+	? findRoute(network.value, lines.value, start.value.coordinate, destination.value.coordinate)
+	: undefined)
+const routeDescription = computed(() => route.value && start.value && destination.value
+	? describeRoute(route.value, start.value, destination.value, lines.value, places.value)
+	: undefined)
+
 /** Loading the WFS and laying the lines onto it both have to succeed. */
 const status = computed<LoadStatus>(() => model.value.state === 'error' ? 'error' : loadStatus.value)
 
 const statusText = computed(() => {
 	if (model.value.state === 'error') {
-		return `The lines could not be laid onto the route sections. ${model.value.message}`
+		return `Die Linien konnten nicht auf die Streckenabschnitte gelegt werden. ${model.value.message}`
 	}
 	switch (loadStatus.value) {
 		case 'loading':
-			return 'Loading the Stadtbahn network…'
+			return 'Das Stadtbahnnetz wird geladen …'
 		case 'error':
-			return `The Stadtbahn network could not be loaded. ${loadError.value}`
+			return `Das Stadtbahnnetz konnte nicht geladen werden. ${loadError.value}`
 		case 'ready': {
 			if (model.value.state !== 'ready') {
 				return ''
@@ -38,8 +49,8 @@ const statusText = computed(() => {
 			// Track used by the lines, each shared stretch counted once (the depot track is not part of a line).
 			const { network: graph, lines: resolved, places } = model.value
 			const edgeIds = new Set(resolved.flatMap(line => line.path.edgeIds))
-			const kilometers = [...edgeIds].reduce((sum, edgeId) => sum + itemAt(graph.edges, edgeId).lengthMeters, 0) / 1000
-			return `Stadtbahn network loaded: ${String(resolved.length)} lines on ${kilometers.toFixed(1)} km of track, ${String(places.length)} named places.`
+			const meters = [...edgeIds].reduce((sum, edgeId) => sum + itemAt(graph.edges, edgeId).lengthMeters, 0)
+			return `Stadtbahnnetz geladen: ${String(resolved.length)} Linien auf ${formatDistance(meters)} Strecke, ${String(places.length)} benannte Orte.`
 		}
 	}
 })
@@ -86,11 +97,11 @@ function retry (): void {
 				/>
 			</svg>
 			<h1 class="app-header__title">
-				Kiel Transit Route Simulator
+				Stadtbahn-Simulator Kiel
 			</h1>
 		</div>
 		<p class="app-header__note">
-			Student project, not an official service of the Landeshauptstadt Kiel.
+			Studentisches Projekt, kein offizielles Angebot der Landeshauptstadt Kiel.
 		</p>
 	</header>
 	<main class="app-main">
@@ -126,7 +137,7 @@ function retry (): void {
 					class="kern-icon kern-icon--autorenew"
 					aria-hidden="true"
 				/>
-				<span class="kern-label">Try again</span>
+				<span class="kern-label">Erneut versuchen</span>
 			</button>
 		</div>
 		<div class="app-content">
@@ -136,12 +147,13 @@ function retry (): void {
 				:places="places"
 				:start="start"
 				:destination="destination"
+				:route="route"
 				@pick="chooseOnMap"
 			/>
 			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
 			<aside
 				class="side-panel"
-				aria-label="Route and lines"
+				aria-label="Verbindung und Linien"
 				tabindex="0"
 			>
 				<RouteForm
@@ -152,6 +164,10 @@ function retry (): void {
 					:message="selectionMessage"
 					@choose="choose"
 					@swap="swap"
+				/>
+				<RouteSummary
+					:description="routeDescription"
+					:complete="start !== undefined && destination !== undefined"
 				/>
 				<LineLegend :lines="lines" />
 			</aside>

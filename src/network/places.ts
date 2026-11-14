@@ -58,7 +58,7 @@ export function closestOnLines (lines: readonly ResolvedLine[], point: Coordinat
 export function resolvePlace (lines: readonly ResolvedLine[], definition: PlaceDefinition): ResolvedPlace {
 	const position = closestOnLines(lines, fromLonLat(definition.coordinate, MAP_PROJECTION))
 	if (!position || position.distanceMeters > MAX_PLACE_DISTANCE_METERS) {
-		throw new Error(`The place "${definition.name}" is not on any line.`)
+		throw new Error(`Der Ort „${definition.name}“ liegt an keiner Linie.`)
 	}
 	return { definition, coordinate: position.coordinate, lineIds: position.lineIds }
 }

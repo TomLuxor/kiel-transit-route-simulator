@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue'
 
-import type { Endpoint } from '@/composables/useRouteSelection'
 import type { ResolvedPlace } from '@/network/places'
 
+import { type Endpoint, ENDPOINT_WORDS } from '@/composables/useRouteSelection'
 import { describeLines, placePoint, type RoutePoint } from '@/network/routePoints'
 
 const props = defineProps<{
@@ -25,8 +25,8 @@ const emit = defineEmits<{
 const sortedPlaces = computed(() => [...props.places].sort((a, b) => a.definition.name.localeCompare(b.definition.name, 'de')))
 
 const fields = computed(() => [
-	{ endpoint: 'start', title: 'Start', point: props.start, other: props.destination },
-	{ endpoint: 'destination', title: 'Destination', point: props.destination, other: props.start },
+	{ endpoint: 'start', title: ENDPOINT_WORDS.start.title, point: props.start, other: props.destination },
+	{ endpoint: 'destination', title: ENDPOINT_WORDS.destination.title, point: props.destination, other: props.start },
 ] as const)
 
 async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
@@ -54,10 +54,10 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 			id="route-form-title"
 			class="route-form__title"
 		>
-			Route
+			Start und Ziel
 		</h2>
 		<p class="route-form__intro">
-			Choose start and destination from the lists, or click or tap a line on the map.
+			Start und Ziel aus den Listen wählen oder in der Karte auf eine Linie klicken oder tippen.
 		</p>
 		<div
 			v-for="field in fields"
@@ -120,7 +120,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 					>
 						<path d="M8 4v15M4 15l4 4 4-4M16 20V5M12 9l4-4 4 4" />
 					</svg>
-					<span class="kern-label">Swap<span class="kern-sr-only"> start and destination</span></span>
+					<span class="kern-label">Tauschen<span class="app-visually-hidden"> (Start und Ziel)</span></span>
 				</button>
 			</div>
 			<div class="kern-form-input__select-wrapper">
@@ -134,7 +134,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 						value=""
 						disabled
 					>
-						Choose a place
+						Ort wählen
 					</option>
 					<option
 						v-if="field.point?.kind === 'point'"
@@ -155,7 +155,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 		</div>
 		<fieldset class="kern-fieldset">
 			<legend class="kern-label">
-				A click on the map sets the
+				Ein Klick in die Karte wählt
 			</legend>
 			<div class="kern-fieldset__body kern-fieldset__body--horizontal">
 				<div

@@ -17,7 +17,7 @@ defineProps<{
 			id="line-legend-title"
 			class="line-legend__title"
 		>
-			Lines
+			Linien
 		</h2>
 		<ul class="line-legend__list">
 			<li
@@ -29,7 +29,7 @@ defineProps<{
 				<div>
 					<p class="line-legend__name">
 						{{ line.definition.name }}
-						<span class="line-legend__length">{{ line.definition.officialLengthKm.toLocaleString('en') }} km</span>
+						<span class="line-legend__length">{{ line.definition.officialLengthKm.toLocaleString('de-DE') }} km</span>
 					</p>
 					<p class="line-legend__route">
 						{{ line.definition.route }}
@@ -38,7 +38,7 @@ defineProps<{
 			</li>
 		</ul>
 		<p class="line-legend__source">
-			Planned core network from the route study of the City of Kiel (2022). Where lines share a track, they are drawn side by side.
+			Geplantes Kernnetz aus der Trassenstudie der Landeshauptstadt Kiel (2022). Wo sich Linien eine Strecke teilen, sind sie nebeneinander gezeichnet.
 		</p>
 	</section>
 </template>

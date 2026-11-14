@@ -15,6 +15,7 @@ Step-by-step plan for the Kiel Transit Route Simulator. Each step ends in a stat
 - **Data from the city of Kiel's geoservice** (ArcGIS Server, which offers both WFS 2.0 and WMS). The server sends `Access-Control-Allow-Origin: *`, so the browser can call it directly without a proxy.
 - **WFS endpoint `LHKielWmsWfs`, layer `lhkiel:Trassenabschnitte`**, because it is the one named in the official metadata record and on the open data portal (CC BY 4.0), which makes it easy to cite.
 - **The WFS delivers GeoJSON in EPSG:4326** with `outputFormat=GEOJSON&srsName=EPSG:4326`, which OpenLayers reads without extra projection libraries.
+- **The page is in German** (`lang="de"`), for the people of Kiel the Stadtbahn is planned for; screen readers then pronounce it correctly. Its name is "Stadtbahn-Simulator Kiel". Code, comments and these documents stay in English.
 - **Design: KERN as the foundation, with an own transit layer.** KERN (`@kern-ux/native`, plain CSS classes in our own semantic markup, not the community Vue kit) provides colors, Fira Sans, spacing, focus style, buttons and the light and dark themes. Our own: logo, line colors and badges, route display, map controls on KERN tokens. KERN's action blue means clickable; signal yellow (`--app-color-signal`) means transit and always carries black text. No official-website header bar, coats of arms or KERN logo, and a "student project" note in the header, so the app cannot pass as an official service of the city.
 
 ## What the data looks like
@@ -104,8 +105,8 @@ Done after step 2, because the map is the tool for checking the data:
 
 ## Step 4: Selecting start and destination
 
-- [x] Mouse and touch: a click snaps to the nearest point on a line within 20 px, or to a named place within 12 px of its dot (`src/network/routePoints.ts`). A point is named after the nearest place on its line, for example "Point on line 2, 1.1 km from Wik", so the form and screen readers can say where it is. Clicks far from every line are ignored with a hint. Over a line, the pointer changes. The closest-point search compares planar distances, because it runs on every pointer move.
-- [x] Keyboard and screen reader: `RouteForm.vue`, a `<form>` with two labelled KERN selects, a swap button and a radio group "A click on the map sets the start / destination". After the first choice, the map click moves on to the empty endpoint, so two clicks choose start and destination. The places are listed alphabetically with their lines ("Hauptbahnhof (all lines)") instead of grouped by line: grouping would list a place up to four times, and an alphabetical list lets the keyboard jump by first letter. A clicked point appears as an extra option. Map click and form share one state (`useRouteSelection`).
+- [x] Mouse and touch: a click snaps to the nearest point on a line within 20 px, or to a named place within 12 px of its dot (`src/network/routePoints.ts`). A point is named after the nearest place on its line, for example "Punkt auf Linie 2, 1,1 km von Wik entfernt", so the form and screen readers can say where it is. Clicks far from every line are ignored with a hint. Over a line, the pointer changes. The closest-point search compares planar distances, because it runs on every pointer move.
+- [x] Keyboard and screen reader: `RouteForm.vue`, a `<form>` with two labelled KERN selects, a swap button and a radio group "Ein Klick in die Karte wählt: Start / Ziel". After the first choice, the map click moves on to the empty endpoint, so two clicks choose start and destination. The places are listed alphabetically with their lines ("Hauptbahnhof (alle Linien)") instead of grouped by line: grouping would list a place up to four times, and an alphabetical list lets the keyboard jump by first letter. A clicked point appears as an extra option. Map click and form share one state (`useRouteSelection`).
 - [x] Start and destination must differ: the other endpoint's place is disabled in each list, and a choice closer than 50 m to the other endpoint is refused with a message. Results of map clicks and refusals are announced in a `role="status"` region.
 - [x] Markers as in the logo: the start a filled dark disc, the destination a signal-yellow disc in a dark ring, on their own canvas above everything. The form labels show the same markers, so they double as their legend. A point chosen in the form that is outside the view is panned into view (no animation with `prefers-reduced-motion`).
 - [x] The named places on the map: station dots with their names; where a line ends, its badge marks the place. Names that would overlap are left out until the map is zoomed in, the busiest places first; badges and dots are never covered. Hauptbahnhof and Am Langsee have their name on the left.
@@ -116,11 +117,13 @@ Done after step 2, because the map is the tool for checking the data:
 
 Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be tested on its own.
 
-- [ ] Reuse the network graph from step 1 and attach the line IDs to its edges (an edge on the trunk carries all four lines).
-- [ ] Insert start and destination into the graph by splitting the edge they lie on.
-- [ ] Dijkstra over (node, line) pairs with a penalty for every change of line, so that routes with fewer changes win.
-- [ ] Result: a list of legs `{ lineId, coordinates, lengthMeters }` and the transfer points.
-- [ ] Tests (Vitest is set up since step 1): same line, one change, two changes, and start on a junction.
+- [x] The line IDs per edge come from the line paths of step 1 (an edge on the trunk carries all four lines).
+- [x] Simpler than planned, in two steps (`src/routing/route.ts`). First the way along the track: start and destination are located on their edges, and the shortest way leaves the start's edge at either end, follows Dijkstra's shortest path, and enters the destination's edge at either end (or stays on the edge if both lie on it). Then the lines along that way, greedily: ride the line that follows the way furthest, change there to the line that goes furthest from that point, and so on. The planned Dijkstra over (node, line) pairs with a change penalty is not needed, because the track the lines use is a tree (23 nodes, 22 edges, checked by a test): there is only one way between two points, and along a fixed way the greedy choice gives the fewest changes. It also places each change where the first line turns off (Suchsdorf to Elmschenhagen changes at Karlstal, not at Ansgarkirche), which a penalty alone would leave to chance.
+- [x] Result: legs `{ lineId, coordinates, lengthMeters }`; the changes are where the legs meet. `src/routing/describe.ts` names them: the place at a change, "vom Startpunkt" and "bis zum Zielpunkt" for points chosen on the map (their long names already stand in the form), and a summary such as "12,2 km, 1 Umstieg".
+- [x] Tests: same line, one change (Wik to Mettenhof at Andreas-Gayk-Straße), the change where the first line turns off, a start on a junction, a start between places, no gaps and the same length in both directions, every one of the 506 pairs of places with at most one change, and the German description. The Kiel network never needs two changes, because all lines share the trunk, so a small test network checks two changes and that a longer line saves one.
+- [x] Shown right away, not only in step 6: the route in the colors of its lines, twice as wide, over the dimmed network, with white change markers, and the view fitted to the route. In the panel, `RouteSummary.vue` lists the legs ("Umstieg in Linie 3") and a `role="status"` region announces each new route in one sentence.
+- [x] The whole page is in German (`lang="de"`), including the error messages that can reach the status line, the map controls and German number formats ("34,5 km").
+- [x] Found on the way: KERN takes any button that contains `kern-sr-only` for an icon-only button and fixes its width at 40 px, which cut off the swap button. Buttons with a visible label use the app's own `app-visually-hidden` instead. Fitting the view now adds the height of the attributions at the bottom, which cover three lines on phones.
 
 ## Step 6: Simulating the ride
 
@@ -169,6 +172,6 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Vue.js | Vue 3 | done |
 | At least one WMS and one WFS | basemap.de WMS, Kiel WFS (step 2) | done |
 | OpenLayers or POLAR | OpenLayers 10 | installed |
-| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection by keyboard and screen reader done | started |
+| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection and route description by keyboard and screen reader done, page language German | started |
 | README with topic, build and run instructions | `README.md` | started |
 | 15-minute presentation, slides on Moodle | step 9 | open |

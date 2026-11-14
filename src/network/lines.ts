@@ -23,13 +23,13 @@ export function resolveLine (network: Network, definition: LineDefinition): Reso
 	const nodeIds = definition.waypoints.map(waypoint => {
 		const { node, distanceMeters } = nearestNode(network, fromLonLat(waypoint, MAP_PROJECTION))
 		if (distanceMeters > MAX_WAYPOINT_DISTANCE_METERS) {
-			throw new Error(`${definition.name}: the waypoint ${waypoint.join(', ')} is ${String(Math.round(distanceMeters))} m away from the network.`)
+			throw new Error(`${definition.name}: Der Wegpunkt ${waypoint.join(', ')} liegt ${String(Math.round(distanceMeters))} m neben dem Netz.`)
 		}
 		return node.id
 	})
 	const path = pathThrough(network, nodeIds)
 	if (!path) {
-		throw new Error(`${definition.name}: its waypoints are not connected in the network.`)
+		throw new Error(`${definition.name}: Die Wegpunkte sind im Netz nicht verbunden.`)
 	}
 	return { definition, path, coordinates: pathCoordinates(network, path) }
 }

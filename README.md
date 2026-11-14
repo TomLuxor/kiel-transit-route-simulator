@@ -4,7 +4,16 @@ A web map application for the course *Geographical Web Applications* (HAW Kiel, 
 
 Kiel is planning a light rail system (Stadtbahn). This application shows the planned lines on a map, each line in its own color. You select two points on the network, on the same line or on different lines. The map then zooms to the starting point and moves along the line to the destination. If the route needs a change of line, it follows both lines and shows the transfer.
 
-> **Status:** in development. The map shows the four planned lines in their own colors, side by side where they share a track, with a legend and the named places. Start and destination can be chosen with a click or tap on a line, or by keyboard in the route form. The route search and the ride simulation follow. The step-by-step plan is in [PLAN.md](PLAN.md).
+The page itself is in German and is called *Stadtbahn-Simulator Kiel*.
+
+> **Status:** in development. The map shows the four planned lines in their own colors, side by side where they share a track, with a legend and the named places. Start and destination can be chosen with a click or tap on a line, or by keyboard in the route form; the app then finds the route with the fewest changes, shows it on the map and describes it in the side panel. The ride simulation follows. The step-by-step plan is in [PLAN.md](PLAN.md).
+
+## How the route is found
+
+1. **The way along the track.** Start and destination are located on the network built from the WFS route sections. Dijkstra's algorithm finds the shortest way between them along the track that the lines use.
+2. **The lines along that way.** Starting at the start, the app rides the line that follows the way furthest, changes there to the line that goes furthest from that point, and so on. This gives the fewest changes, and each change happens where the previous line turns off.
+
+The track the lines use has no loops (a tree, checked by a test), so there is only one way between two points and the two steps together give the best route. Because all four lines share the trunk from Andreas-Gayk-Straße via Hauptbahnhof to Karlstal, every route needs at most one change.
 
 ## Data sources
 

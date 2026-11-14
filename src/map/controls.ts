@@ -5,7 +5,7 @@ import { defaults as defaultControls } from 'ol/control/defaults'
 
 /**
  * Button content with a visible symbol and a name for screen readers. OpenLayers puts only the symbol into
- * the button by default, so screen readers would announce "plus" instead of "Zoom in".
+ * the button by default, so screen readers would announce "plus" instead of "Vergrößern".
  */
 function buttonLabel (symbol: string, name: string): HTMLElement {
 	const label = document.createElement('span')
@@ -23,14 +23,14 @@ function buttonLabel (symbol: string, name: string): HTMLElement {
 export function createControls (): Collection<Control> {
 	return defaultControls({
 		zoomOptions: {
-			zoomInLabel: buttonLabel('+', 'Zoom in'),
-			zoomOutLabel: buttonLabel('−', 'Zoom out'),
-			zoomInTipLabel: 'Zoom in',
-			zoomOutTipLabel: 'Zoom out',
+			zoomInLabel: buttonLabel('+', 'Vergrößern'),
+			zoomOutLabel: buttonLabel('−', 'Verkleinern'),
+			zoomInTipLabel: 'Vergrößern',
+			zoomOutTipLabel: 'Verkleinern',
 		},
 		rotateOptions: {
-			label: buttonLabel('⇧', 'Reset rotation to north'),
-			tipLabel: 'Reset rotation to north',
+			label: buttonLabel('⇧', 'Karte nach Norden ausrichten'),
+			tipLabel: 'Karte nach Norden ausrichten',
 		},
 		attributionOptions: {
 			collapsible: false,

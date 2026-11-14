@@ -48,7 +48,7 @@ export const DEFAULT_TOLERANCE_METERS = 60
 export function itemAt<T> (items: readonly T[], index: number): T {
 	const item = items[index]
 	if (item === undefined) {
-		throw new Error(`No item at index ${String(index)}.`)
+		throw new Error(`Kein Element an Position ${String(index)}.`)
 	}
 	return item
 }
@@ -180,7 +180,7 @@ export function nearestNode (network: Network, coordinate: Coordinate): { node: 
 		}
 	}
 	if (!best) {
-		throw new Error('The network has no nodes.')
+		throw new Error('Das Netz hat keine Knoten.')
 	}
 	return best
 }

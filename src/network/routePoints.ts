@@ -21,7 +21,7 @@ export interface RoutePoint {
 	readonly kind: 'place' | 'point'
 	/** The place ID, or an ID made from the coordinate for a point. */
 	readonly id: string
-	/** Name in the form and for screen readers, for example "Point on line 2, 340 m from Belvedere". */
+	/** Name in the form and for screen readers, for example "Punkt auf Linie 2, 340 m von Belvedere entfernt". */
 	readonly name: string
 	/** Point on the network in the map projection. */
 	readonly coordinate: Coordinate
@@ -29,22 +29,24 @@ export interface RoutePoint {
 	readonly lineIds: readonly LineId[]
 }
 
-/** "line 2", "lines 1, 2 and 4" or "all lines". */
+/** "Linie 2", "Linien 1, 2 und 4" or "alle Linien". */
 export function describeLines (lineIds: readonly LineId[]): string {
 	const last = lineIds[lineIds.length - 1] ?? ''
 	if (lineIds.length <= 1) {
-		return `line ${last}`
+		return `Linie ${last}`
 	}
 	if (lineIds.length === LINES.length) {
-		return 'all lines'
+		return 'alle Linien'
 	}
-	return `lines ${lineIds.slice(0, -1).join(', ')} and ${last}`
+	return `Linien ${lineIds.slice(0, -1).join(', ')} und ${last}`
 }
 
-/** "340 m" below one kilometer, otherwise "1.2 km". */
+const kilometers = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+/** "340 m" below one kilometer, otherwise "1,2 km". */
 export function formatDistance (meters: number): string {
 	const rounded = Math.round(meters / 10) * 10
-	return rounded < 1000 ? `${String(rounded)} m` : `${(meters / 1000).toFixed(1)} km`
+	return rounded < 1000 ? `${String(rounded)} m` : `${kilometers.format(meters / 1000)} km`
 }
 
 export function placePoint (place: ResolvedPlace): RoutePoint {
@@ -73,14 +75,27 @@ function linePoint (position: LinePosition, places: readonly ResolvedPlace[]): R
 	const onSameLine = places.filter(place => place.lineIds.some(lineId => position.lineIds.includes(lineId)))
 	const nearest = nearestPlace(onSameLine.length > 0 ? onSameLine : places, position.coordinate, distanceMeters)
 	const [x = 0, y = 0] = position.coordinate
-	const where = nearest ? `, ${formatDistance(nearest.distance)} from ${nearest.place.definition.name}` : ''
+	const where = nearest ? `, ${formatDistance(nearest.distance)} von ${nearest.place.definition.name} entfernt` : ''
 	return {
 		kind: 'point',
 		id: `point-${x.toFixed(0)}-${y.toFixed(0)}`,
-		name: `Point on ${describeLines(position.lineIds)}${where}`,
+		name: `Punkt auf ${describeLines(position.lineIds)}${where}`,
 		coordinate: position.coordinate,
 		lineIds: position.lineIds,
 	}
+}
+
+/** A place this close to a point on the network gives the point its name. */
+const SAME_PLACE_METERS = 30
+
+/** The named place at a point on the network (map projection), or else the point named after the nearest place. */
+export function routePointAt (lines: readonly ResolvedLine[], places: readonly ResolvedPlace[], coordinate: Coordinate): RoutePoint | undefined {
+	const position = closestOnLines(lines, coordinate)
+	if (!position) {
+		return undefined
+	}
+	const place = nearestPlace(places, position.coordinate, distanceMeters)
+	return place && place.distance < SAME_PLACE_METERS ? placePoint(place.place) : linePoint(position, places)
 }
 
 /**

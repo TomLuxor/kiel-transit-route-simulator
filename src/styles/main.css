@@ -66,6 +66,19 @@ a {
 	outline-offset: 2px;
 }
 
+/*
+ * Text for screen readers only, inside buttons with a visible label. KERN's kern-sr-only would do the same,
+ * but KERN takes a button containing it for an icon-only button and fixes its width.
+ */
+.app-visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

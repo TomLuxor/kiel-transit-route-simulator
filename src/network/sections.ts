@@ -31,18 +31,18 @@ function isRecord (value: unknown): value is Record<string, unknown> {
  */
 function parseSection (properties: unknown, geometry: unknown): Section {
 	if (!isRecord(properties)) {
-		throw new Error('A route section has no attributes.')
+		throw new Error('Ein Streckenabschnitt hat keine Attribute.')
 	}
 	const { ogr_fid: id, Name: name, Länge__m_: lengthMeters } = properties
 	if (typeof id !== 'number' || typeof name !== 'string' || typeof lengthMeters !== 'number') {
-		throw new Error('A route section has unexpected attributes.')
+		throw new Error('Ein Streckenabschnitt hat unerwartete Attribute.')
 	}
 	const sectionNumber = /^Abschnitt (?<number>\d+)$/u.exec(name)?.groups?.number
 	if (sectionNumber === undefined) {
-		throw new Error(`The route section name "${name}" has an unexpected format.`)
+		throw new Error(`Der Name des Streckenabschnitts „${name}“ hat ein unerwartetes Format.`)
 	}
 	if (!(geometry instanceof MultiLineString)) {
-		throw new Error(`The route section "${name}" is not a MultiLineString.`)
+		throw new Error(`Der Streckenabschnitt „${name}“ ist kein MultiLineString.`)
 	}
 	return { id, sectionNumber: Number(sectionNumber), name, lengthMeters, geometry }
 }
@@ -64,10 +64,10 @@ export async function fetchSections (featureProjection: ProjectionLike, signal?:
 		if (signal?.aborted) {
 			throw error
 		}
-		throw new Error('The map server of the City of Kiel could not be reached.')
+		throw new Error('Der Kartenserver der Landeshauptstadt Kiel ist nicht erreichbar.')
 	})
 	if (!response.ok) {
-		throw new Error(`The map server of the City of Kiel answered with an error (status ${String(response.status)}).`)
+		throw new Error(`Der Kartenserver der Landeshauptstadt Kiel hat mit einem Fehler geantwortet (Status ${String(response.status)}).`)
 	}
 	const data: unknown = await response.json()
 	return readSections(data, featureProjection)
@@ -76,11 +76,11 @@ export async function fetchSections (featureProjection: ProjectionLike, signal?:
 /** Checks a GeoJSON answer of the WFS (in EPSG:4326) and turns it into sections in `featureProjection`. */
 export function readSections (data: unknown, featureProjection: ProjectionLike): Section[] {
 	if (!isRecord(data)) {
-		throw new Error('The WFS did not answer with GeoJSON.')
+		throw new Error('Der WFS hat nicht mit GeoJSON geantwortet.')
 	}
 	const features = new GeoJSON().readFeatures(data, { dataProjection: 'EPSG:4326', featureProjection })
 	if (features.length === 0) {
-		throw new Error('The WFS returned no route sections.')
+		throw new Error('Der WFS hat keine Streckenabschnitte geliefert.')
 	}
 	return features.map(feature => parseSection(feature.getProperties(), feature.getGeometry()))
 }

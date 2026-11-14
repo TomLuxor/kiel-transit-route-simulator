@@ -29,7 +29,7 @@ export function useNetwork (sections: Readonly<Ref<readonly Section[]>>) {
 			const places = PLACES.map(place => resolvePlace(lines, place))
 			return { state: 'ready', network, lines, places }
 		} catch (error) {
-			return { state: 'error', message: error instanceof Error ? error.message : 'Unknown error.' }
+			return { state: 'error', message: error instanceof Error ? error.message : 'Unbekannter Fehler.' }
 		}
 	})
 }

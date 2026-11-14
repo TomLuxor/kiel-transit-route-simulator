@@ -68,9 +68,38 @@ export function closestPosition (coordinates: readonly Coordinate[], point: Coor
 		}
 	}
 	if (!best) {
-		throw new Error('A polyline needs at least two coordinates.')
+		throw new Error('Eine Linie braucht mindestens zwei Koordinaten.')
 	}
 	return { ...best, distanceMeters: distanceMeters(point, best.coordinate) }
+}
+
+/** A position as a fractional vertex index: 1.5 lies halfway between the second and the third coordinate. */
+export function positionIndex (position: PolylinePosition): number {
+	return position.segment + position.fraction
+}
+
+function pointAtIndex (coordinates: readonly Coordinate[], index: number): Coordinate {
+	const segment = Math.max(0, Math.min(Math.floor(index), coordinates.length - 2))
+	const fraction = index - segment
+	const [ax = 0, ay = 0] = coordinates[segment] ?? []
+	const [bx = ax, by = ay] = coordinates[segment + 1] ?? []
+	return [ax + fraction * (bx - ax), ay + fraction * (by - ay)]
+}
+
+/** The part of a polyline between two fractional vertex indices, in the direction from `from` to `to`. */
+export function subPolyline (coordinates: readonly Coordinate[], from: number, to: number): Coordinate[] {
+	if (to < from) {
+		return subPolyline(coordinates, to, from).reverse()
+	}
+	const result = [pointAtIndex(coordinates, from)]
+	for (let index = Math.floor(from) + 1; index < to; index++) {
+		const coordinate = coordinates[index]
+		if (coordinate) {
+			result.push(coordinate)
+		}
+	}
+	result.push(pointAtIndex(coordinates, to))
+	return result
 }
 
 /** Splits a polyline at the given positions; each position becomes the last point of one piece and the first of the next. */
