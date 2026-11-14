@@ -15,6 +15,7 @@ Step-by-step plan for the Kiel Transit Route Simulator. Each step ends in a stat
 - **Data from the city of Kiel's geoservice** (ArcGIS Server, which offers both WFS 2.0 and WMS). The server sends `Access-Control-Allow-Origin: *`, so the browser can call it directly without a proxy.
 - **WFS endpoint `LHKielWmsWfs`, layer `lhkiel:Trassenabschnitte`**, because it is the one named in the official metadata record and on the open data portal (CC BY 4.0), which makes it easy to cite.
 - **The WFS delivers GeoJSON in EPSG:4326** with `outputFormat=GEOJSON&srsName=EPSG:4326`, which OpenLayers reads without extra projection libraries.
+- **Design: KERN as the foundation, with an own transit layer.** KERN (`@kern-ux/native`, plain CSS classes in our own semantic markup, not the community Vue kit) provides colors, Fira Sans, spacing, focus style, buttons and the light and dark themes. Our own: logo, line colors and badges, route display, map controls on KERN tokens. KERN's action blue means clickable; signal yellow (`--app-color-signal`) means transit and always carries black text. No official-website header bar, coats of arms or KERN logo, and a "student project" note in the header, so the app cannot pass as an official service of the city.
 
 ## What the data looks like
 
@@ -95,7 +96,7 @@ Done after step 2, because the map is the tool for checking the data:
 
 - [ ] Style function that colors each line according to `lines.ts`.
 - [ ] Sections shared by several lines: draw parallel offset strokes or stacked widths so that every line stays visible.
-- [ ] Colors that color-blind users can tell apart, with at least 3:1 contrast against the background map (WCAG 1.4.11).
+- [ ] Colors that color-blind users can tell apart, with at least 3:1 contrast against the white casing (WCAG 1.4.11), clearly different from KERN's action blue, and checked in light and dark mode (in dark mode the basemap is inverted).
 - [ ] Never color alone: a legend with line names, and labels on the map.
 - [ ] The legend is an HTML list next to the map, so screen readers can read it, not something drawn into the map canvas.
 

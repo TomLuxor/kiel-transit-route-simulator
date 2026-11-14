@@ -57,9 +57,15 @@ export async function fetchSections (featureProjection: ProjectionLike, signal?:
 		srsName: 'EPSG:4326',
 	}).toString()
 
-	const response = await fetch(url, { signal })
+	// The browser's own message for network errors ("Failed to fetch") means nothing to users.
+	const response = await fetch(url, { signal }).catch((error: unknown) => {
+		if (signal?.aborted) {
+			throw error
+		}
+		throw new Error('The map server of the City of Kiel could not be reached.', { cause: error })
+	})
 	if (!response.ok) {
-		throw new Error(`The WFS answered with status ${String(response.status)}.`)
+		throw new Error(`The map server of the City of Kiel answered with an error (status ${String(response.status)}).`)
 	}
 	const data: unknown = await response.json()
 	if (!isRecord(data)) {

@@ -21,7 +21,19 @@ No public service publishes the lines themselves or the stops. The application t
 
 - [Vue 3](https://vuejs.org/) with TypeScript, built with [Vite](https://vite.dev/)
 - [OpenLayers](https://openlayers.org/) for the map
+- [KERN UX-Standard](https://kern-ux.de) (`@kern-ux/native`) for colors, type, spacing and basic components
 - [ESLint](https://eslint.org/) with the shared config [`@dataport/eslint-config-geodev`](https://github.com/Dataport/eslint-config-geodev)
+
+## Design
+
+The interface builds on KERN, the open UX standard for the German public administration initiated by Hamburg and Schleswig-Holstein, and adds its own transit layer on top:
+
+- **From KERN:** colors, the typeface Fira Sans, spacing, the focus style, buttons, and the light and dark themes, which follow the system setting.
+- **Own:** the logo, the line colors, the route display and the map controls, built on KERN's design tokens.
+- **Two color rules:** KERN's action blue marks everything clickable. Signal yellow marks transit elements only, never something clickable, and always carries black text.
+- **Not an official service:** this is a student project. It states so in the header and does not use KERN's official-website header bar, coats of arms or the KERN logo.
+
+KERN's code is used unchanged under the [EUPL 1.2](https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12). Fira Sans is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org) and is served by the application itself, not by an external font service.
 
 ## Prerequisites
 

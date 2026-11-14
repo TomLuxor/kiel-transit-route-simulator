@@ -10,6 +10,7 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import type { Section } from '@/network/sections'
 
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION, SECTIONS_ATTRIBUTION } from '@/map/config'
+import { createControls } from '@/map/controls'
 import { createBackgroundLayer, createSectionLayer } from '@/map/layers'
 
 const props = defineProps<{
@@ -43,6 +44,7 @@ watch(() => props.sections, showSections)
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
+		controls: createControls(),
 		layers: [createBackgroundLayer(), createSectionLayer(sectionSource)],
 		view: new View({
 			projection: MAP_PROJECTION,
@@ -72,7 +74,7 @@ onBeforeUnmount(() => {
 		/>
 		<p
 			id="map-help"
-			class="visually-hidden"
+			class="kern-sr-only"
 		>
 			When the map has focus, the arrow keys move the map and the plus and minus keys zoom.
 		</p>
@@ -81,6 +83,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .map-view {
+	/* OpenLayers control colors, taken from KERN so that they follow light and dark mode. */
+	--ol-background-color: var(--kern-color-layout-background-default);
+	--ol-foreground-color: var(--kern-color-layout-text-default);
+	--ol-subtle-foreground-color: var(--kern-color-layout-text-muted);
+	--ol-partial-background-color: var(--kern-color-layout-background-default);
+	--ol-subtle-background-color: var(--kern-color-layout-background-hued);
+	--ol-accent-background-color: var(--kern-color-layout-background-hued);
+	--ol-brand-color: var(--kern-color-action-default);
+
 	position: relative;
 	min-height: 0;
 }
@@ -91,7 +102,91 @@ onBeforeUnmount(() => {
 }
 
 .map:focus-visible {
-	outline: 3px solid var(--color-focus);
-	outline-offset: -3px;
+	outline: var(--app-focus-outline);
+	outline-offset: -4px;
+}
+
+/* Map buttons in the style of KERN secondary buttons, 44 px for comfortable touch targets. */
+.map-view :deep(.ol-zoom),
+.map-view :deep(.ol-rotate) {
+	display: flex;
+	flex-direction: column;
+	gap: var(--kern-metric-space-x-small);
+	padding: 0;
+	background: none;
+}
+
+.map-view :deep(.ol-zoom) {
+	top: var(--kern-metric-space-small);
+	left: var(--kern-metric-space-small);
+}
+
+.map-view :deep(.ol-rotate) {
+	top: var(--kern-metric-space-small);
+	right: var(--kern-metric-space-small);
+}
+
+/* Only zoom and rotate: a broader selector would also show the attribution toggle that OpenLayers hides. */
+.map-view :deep(.ol-zoom button),
+.map-view :deep(.ol-rotate button) {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	margin: 0;
+	color: var(--kern-color-action-default);
+	font-family: var(--kern-typography-font-family-default);
+	font-size: 1.5rem;
+	font-weight: var(--kern-typography-font-weight-semi-bold);
+	line-height: 1;
+	background: var(--kern-color-layout-background-default);
+	border: var(--kern-metric-border-width-default) solid var(--kern-color-action-default);
+	border-radius: var(--kern-metric-border-radius-default);
+}
+
+.map-view :deep(.ol-zoom button:hover),
+.map-view :deep(.ol-rotate button:hover) {
+	color: var(--kern-color-action-on-default);
+	background: var(--kern-color-action-default);
+	outline: none;
+}
+
+.map-view :deep(.ol-zoom button:focus),
+.map-view :deep(.ol-rotate button:focus) {
+	outline: none;
+}
+
+.map-view :deep(.ol-zoom button:focus-visible),
+.map-view :deep(.ol-rotate button:focus-visible) {
+	outline: var(--app-focus-outline);
+	outline-offset: 2px;
+}
+
+/* Attributions on a solid background, so that their contrast does not depend on the map below. */
+.map-view :deep(.ol-attribution) {
+	right: 0;
+	bottom: 0;
+	max-width: 100%;
+	padding: var(--kern-metric-space-2x-small) var(--kern-metric-space-small);
+	background: var(--kern-color-layout-background-default);
+	border-radius: var(--kern-metric-border-radius-default) 0 0 0;
+}
+
+.map-view :deep(.ol-attribution ul) {
+	padding: 0;
+	color: var(--kern-color-layout-text-default);
+	font-size: var(--kern-font-size-14);
+	text-shadow: none;
+}
+
+.map-view :deep(.ol-attribution a) {
+	color: var(--kern-color-action-default);
+}
+
+/* Dark mode: the grey basemap is inverted, so the map matches KERN's dark theme. */
+@media (prefers-color-scheme: dark) {
+	.map-view :deep(.basemap) {
+		filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+	}
 }
 </style>

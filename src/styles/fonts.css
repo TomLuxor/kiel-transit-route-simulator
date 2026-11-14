@@ -1,0 +1,36 @@
+/*
+ * Fira Sans, the typeface of KERN (SIL Open Font License 1.1). The files come with @kern-ux/native and are
+ * served by this app, not by an external font service. Only the weights KERN components use are declared:
+ * 400 (regular and italic), 500 and 600.
+ */
+@font-face {
+	font-family: 'Fira Sans';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('@kern-ux/native/dist/fonts/fira-sans/FiraSans-Regular.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Fira Sans';
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+	src: url('@kern-ux/native/dist/fonts/fira-sans/FiraSans-Italic.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Fira Sans';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('@kern-ux/native/dist/fonts/fira-sans/FiraSans-Medium.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Fira Sans';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('@kern-ux/native/dist/fonts/fira-sans/FiraSans-SemiBold.woff2') format('woff2');
+}
