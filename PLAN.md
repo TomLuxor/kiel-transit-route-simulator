@@ -95,11 +95,12 @@ Done after step 2, because the map is the tool for checking the data:
 
 ## Step 3: Lines in colors, with a legend
 
-- [ ] Style function that colors each line according to `lines.ts`.
-- [ ] Sections shared by several lines: draw parallel offset strokes or stacked widths so that every line stays visible.
-- [ ] Colors that color-blind users can tell apart, with at least 3:1 contrast against the white casing (WCAG 1.4.11), clearly different from KERN's action blue, and checked in light and dark mode (in dark mode the basemap is inverted).
-- [ ] Never color alone: a legend with line names, and labels on the map.
-- [ ] The legend is an HTML list next to the map, so screen readers can read it, not something drawn into the map canvas.
+- [x] Style function that colors each line according to `lines.ts` (`src/map/lineLayer.ts`); the temporary section layer is gone.
+- [x] Shared tracks: the lines are drawn side by side in 4 px lanes inside one white casing (`src/map/offset.ts`, miter offsets in screen pixels), in the order of the line list. Lines 2 and 3 swap sides inside the Karlstal junction; no fixed order avoids every crossing on this network.
+- [x] Colors: the hue families of the route study's figure 11, from the KERN palette (lightblue-450, orange-450, green-650, violet-650). Checked with the dataviz palette validator on all pairs: CVD ΔE 11.7 (target 8), normal vision ΔE 23.9 (floor 15), at least 3.5:1 against the white casing. The casing keeps the same colors valid in dark mode. The next darker steps fail (orange and green merge for protanopes).
+- [x] Never color alone: line number badges at both ends of every line on the map (black text on lines 1 and 2 at 6.0:1, white on 3 and 4 at 7.0:1), and the legend.
+- [x] The legend is an HTML list in a side panel (`LineLegend.vue`, `LineBadge.vue`): next to the map on laptops and phones in landscape, below it in portrait. The badge keeps an outline in Windows high contrast mode.
+- [x] Check: the lines use 34.5 km of track, the official operated network is 34.7 km (unit test).
 
 ## Step 4: Selecting start and destination
 

@@ -84,6 +84,12 @@ describe('the Kiel Stadtbahn network (WFS snapshot of 14 November 2026)', () => 
 		expect(Math.abs(kilometers - line.definition.officialLengthKm) / line.definition.officialLengthKm).toBeLessThan(0.05)
 	})
 
+	it('uses as much track as the official operated network (34.7 km, ±3 %), each shared stretch counted once', () => {
+		const edgeIds = new Set(lines.flatMap(line => line.path.edgeIds))
+		const kilometers = [...edgeIds].reduce((sum, edgeId) => sum + itemAt(network.edges, edgeId).lengthMeters, 0) / 1000
+		expect(Math.abs(kilometers - 34.7) / 34.7).toBeLessThan(0.03)
+	})
+
 	it('connects every line end to every other', () => {
 		const ends = lines.flatMap(line => [itemAt(line.path.nodeIds, 0), itemAt(line.path.nodeIds, line.path.nodeIds.length - 1)])
 		for (const end of ends) {

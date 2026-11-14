@@ -1,22 +1,41 @@
 <script setup lang="ts">
 import { computed, useTemplateRef } from 'vue'
 
+import LineLegend from '@/components/LineLegend.vue'
 import MapView from '@/components/MapView.vue'
-import { useSections } from '@/composables/useSections'
+import { useNetwork } from '@/composables/useNetwork'
+import { type LoadStatus, useSections } from '@/composables/useSections'
 import { MAP_PROJECTION } from '@/map/config'
+import { itemAt } from '@/network/graph'
 
-const { sections, status, errorMessage, load } = useSections(MAP_PROJECTION)
+const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
+const model = useNetwork(sections)
 const statusMessage = useTemplateRef<HTMLParagraphElement>('statusMessage')
 
+const network = computed(() => model.value.state === 'ready' ? model.value.network : undefined)
+const lines = computed(() => model.value.state === 'ready' ? model.value.lines : [])
+
+/** Loading the WFS and laying the lines onto it both have to succeed. */
+const status = computed<LoadStatus>(() => model.value.state === 'error' ? 'error' : loadStatus.value)
+
 const statusText = computed(() => {
-	switch (status.value) {
+	if (model.value.state === 'error') {
+		return `The lines could not be laid onto the route sections. ${model.value.message}`
+	}
+	switch (loadStatus.value) {
 		case 'loading':
 			return 'Loading the Stadtbahn network…'
 		case 'error':
-			return `The Stadtbahn network could not be loaded. ${errorMessage.value}`
+			return `The Stadtbahn network could not be loaded. ${loadError.value}`
 		case 'ready': {
-			const kilometers = sections.value.reduce((sum, section) => sum + section.lengthMeters, 0) / 1000
-			return `Stadtbahn network loaded: ${String(sections.value.length)} route sections, ${kilometers.toFixed(1)} km.`
+			if (model.value.state !== 'ready') {
+				return ''
+			}
+			// Track used by the lines, each shared stretch counted once (the depot track is not part of a line).
+			const { network: graph, lines: resolved, places } = model.value
+			const edgeIds = new Set(resolved.flatMap(line => line.path.edgeIds))
+			const kilometers = [...edgeIds].reduce((sum, edgeId) => sum + itemAt(graph.edges, edgeId).lengthMeters, 0) / 1000
+			return `Stadtbahn network loaded: ${String(resolved.length)} lines on ${kilometers.toFixed(1)} km of track, ${String(places.length)} named places.`
 		}
 	}
 })
@@ -106,7 +125,20 @@ function retry (): void {
 				<span class="kern-label">Try again</span>
 			</button>
 		</div>
-		<MapView :sections="sections" />
+		<div class="app-content">
+			<MapView
+				:network="network"
+				:lines="lines"
+			/>
+			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
+			<aside
+				class="side-panel"
+				aria-label="Line overview"
+				tabindex="0"
+			>
+				<LineLegend :lines="lines" />
+			</aside>
+		</div>
 	</main>
 </template>
 
@@ -197,6 +229,34 @@ function retry (): void {
 
 .status-bar__icon {
 	margin: 0;
+}
+
+/* Map and side panel: side by side on laptops and phones in landscape, the panel below the map in portrait. */
+.app-content {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr) auto;
+	min-height: 0;
+}
+
+.side-panel {
+	max-height: 40dvh;
+	overflow-y: auto;
+	padding: var(--kern-metric-space-default);
+	background: var(--kern-color-layout-background-default);
+	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+}
+
+@media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {
+	.app-content {
+		grid-template-rows: minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) clamp(16rem, 30vw, 24rem);
+	}
+
+	.side-panel {
+		max-height: none;
+		border-top: none;
+		border-left: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	}
 }
 
 .status-bar--error {

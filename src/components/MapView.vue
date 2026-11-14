@@ -1,58 +1,53 @@
 <script setup lang="ts">
 import 'ol/ol.css'
-import Feature from 'ol/Feature'
 import OlMap from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
-import VectorSource from 'ol/source/Vector'
 import View from 'ol/View'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
-import type { Section } from '@/network/sections'
+import type { Network } from '@/network/graph'
+import type { ResolvedLine } from '@/network/lines'
 
-import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION, SECTIONS_ATTRIBUTION } from '@/map/config'
+import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
 import { createControls } from '@/map/controls'
-import { createBackgroundLayer, createSectionLayer } from '@/map/layers'
+import { createBackgroundLayer } from '@/map/layers'
+import { createLineLayer } from '@/map/lineLayer'
 
 const props = defineProps<{
-	sections: readonly Section[]
+	network: Network | undefined
+	lines: readonly ResolvedLine[]
 }>()
 
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
-// Vector sources cannot set attributionsCollapsible; the background source already keeps the attributions expanded.
-const sectionSource = new VectorSource({ attributions: SECTIONS_ATTRIBUTION })
+const lineLayer = createLineLayer()
 let map: OlMap | undefined
 
-function showSections (sections: readonly Section[]): void {
-	sectionSource.clear()
-	sectionSource.addFeatures(sections.map(section => {
-		const feature = new Feature({
-			geometry: section.geometry,
-			label: `${section.name} · ${String(section.id)}`,
-		})
-		feature.setId(section.id)
-		return feature
-	}))
-	const extent = sectionSource.getExtent()
-	if (map && extent && sections.length > 0) {
+function showLines (): void {
+	if (!props.network || props.lines.length === 0) {
+		return
+	}
+	lineLayer.showLines(props.network, props.lines)
+	const extent = lineLayer.layer.getSource()?.getExtent()
+	if (map && extent) {
 		map.getView().fit(extent, { padding: [32, 32, 32, 32] })
 	}
 }
 
-watch(() => props.sections, showSections)
+watch(() => [props.network, props.lines], showLines)
 
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
 		controls: createControls(),
-		layers: [createBackgroundLayer(), createSectionLayer(sectionSource)],
+		layers: [createBackgroundLayer(), lineLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
 			center: fromLonLat(KIEL_CENTER, MAP_PROJECTION),
 			zoom: INITIAL_ZOOM,
 		}),
 	})
-	showSections(props.sections)
+	showLines()
 })
 
 onBeforeUnmount(() => {

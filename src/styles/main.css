@@ -11,7 +11,6 @@
 :root {
 	--app-color-signal: var(--kern-color-yellow-150);
 	--app-color-on-signal: var(--kern-color-black);
-	--app-color-line-casing: var(--kern-color-white);
 	--app-focus-outline: 4px solid var(--kern-color-action-focus-default-contextual);
 
 	color-scheme: light dark;

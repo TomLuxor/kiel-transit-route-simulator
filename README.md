@@ -4,7 +4,7 @@ A web map application for the course *Geographical Web Applications* (HAW Kiel, 
 
 Kiel is planning a light rail system (Stadtbahn). This application shows the planned lines on a map, each line in its own color. You select two points on the network, on the same line or on different lines. The map then zooms to the starting point and moves along the line to the destination. If the route needs a change of line, it follows both lines and shows the transfer.
 
-> **Status:** in development. The map shows the planned route sections on a WMS background map; the lines, the route selection and the ride simulation follow. The step-by-step plan is in [PLAN.md](PLAN.md).
+> **Status:** in development. The map shows the four planned lines in their own colors, side by side where they share a track, with a legend. The route selection and the ride simulation follow. The step-by-step plan is in [PLAN.md](PLAN.md).
 
 ## Data sources
 
