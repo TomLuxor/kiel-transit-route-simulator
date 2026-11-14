@@ -47,7 +47,7 @@ Searched without further results: all 16 folders of the Kiel ArcGIS server, the 
 
 ### The line network (route study 2022, figure 11)
 
-| Line | Route | Length | Sections used (my reading of figure 11, to check on the map) |
+| Line | Route | Length | Sections used (figure 11, checked on the map) |
 | --- | --- | --- | --- |
 | 1 | FH Kiel (Neumühlen) – Wellingdorf – Gaarden – Hbf – Holtenauer Straße – CAU – Steenbeker Weg – Suchsdorf | 15.7 km | 9 (FH Kiel branch), 1, 2, 3, 4, 8 (Suchsdorf branch) |
 | 2 | Elmschenhagen – Preetzer Straße – Gaarden – Hbf – Holtenauer Straße – Wik | 13.2 km | 11, 10, 2 (Hbf to Karlstal), 3, 4 (Dreiecksplatz to Ansgarkirche), 5 |
@@ -71,20 +71,25 @@ Goal: a typed description of the lines that the rest of the application builds o
 - [x] Find the official line network: four lines, route study 2022 (see above).
 - [x] Check whether any service already offers line geometries or stops: none does (see above).
 - [x] Check the topology: one gap of about 50 m, three branch points in the middle of features (see above).
-- [ ] Draw the 16 WFS features with their `ogr_fid` on the map and confirm the section table above.
-- [ ] Write `src/data/lines.ts`. Because three lines branch in the middle of a feature, a line cannot be a list of whole features. Instead, define each line by its two termini and, where needed, a via point (`LineDefinition { id, name, color, stops: Coordinate[] }`), and let the routing graph from step 5 find the geometry between them. This keeps the official WFS as the only geometry source.
-- [ ] Decide what a selectable "point" is. Recommended: the 63 stops, placed by hand on the WFS geometry from the brochure map and the Wikipedia stop lists, marked as approximate in the interface and the README. Fallback: any point on a line.
-- [ ] Ask the lecturer early whether building the lines from the route sections is acceptable, since no public layer has the lines themselves. Optional: ask the Stabsstelle Stadtbahn for stop positions.
+- [x] Decide what a selectable "point" is: the assignment asks for "two points", not stops. Mouse and touch users click anywhere on a line; keyboard and screen reader users choose from named places that the network itself provides: the line ends, the branch points and the section boundaries (about 15 to 20, for example Hauptbahnhof, Karlstal, Wellingdorf). Stops are an optional extra.
+- [x] Asked the Stabsstelle Stadtbahn for stop positions and the current line network (email sent 14 November 2026). If stops arrive, add them as extra selectable points.
+
+Done after step 2, because the map is the tool for checking the data:
+
+- [x] Draw the 16 WFS features with their `Name` and `ogr_fid` on the map and confirm the section table above (labels show in development mode only).
+- [ ] Build the network graph from the sections (`src/network/`): split every line part where another part's end touches it, snap end points within about 60 m, nodes at ends and junctions, edges with length and coordinates. This is the first half of step 5, moved forward.
+- [ ] Write `src/data/lines.ts`: each line defined by its two ends and, where needed, a via point (`LineDefinition { id, name, color, waypoints: Coordinate[] }`). The line's geometry is the shortest path through the graph between its waypoints, so the official WFS stays the only geometry source.
+- [ ] Write `src/data/places.ts`: the named places, each a coordinate on the network and a name taken from the route study.
 
 ## Step 2: Map with WMS and WFS
 
-- [ ] `MapView.vue`: create the OpenLayers `Map` in `onMounted`, remove it in `onBeforeUnmount`, import `ol/ol.css`.
-- [ ] Center the view on Kiel (about 10.13° E, 54.32° N).
-- [ ] Background map from a WMS, for example the basemap.de WMS of the BKG or the city map WMS of Kiel. Check which coordinate systems it offers. If EPSG:3857 is missing, either let OpenLayers reproject the image (`projection: 'EPSG:4326'` on the source) or switch the view to EPSG:25832 with proj4.
+- [x] `MapView.vue`: create the OpenLayers `Map` in `onMounted`, remove it in `onBeforeUnmount`, import `ol/ol.css`. The map element is focusable and labelled, so the OpenLayers keyboard pan and zoom work.
+- [x] Center the view on Kiel; once the sections are loaded, fit the view to the network.
+- [x] Background map from the basemap.de WMS of the BKG (`de_basemapde_web_raster_grau`, grey so that the lines stand out). It offers EPSG:3857, so no reprojection is needed. Loaded as `TileWMS`, so tiles are cached while the ride animation moves the map.
 - [ ] Optional: the Stadtbahn WMS as an extra layer that can be switched on and off (for example the planning areas).
-- [ ] WFS: a `VectorSource` with the `GeoJSON` format that loads `lhkiel:Stadtbahn_Trassenabschnitte`. Describe the feature properties with an interface and check them with type guards on `unknown`, without `any`.
-- [ ] Attributions for all sources (BKG or OpenStreetMap, Landeshauptstadt Kiel).
-- [ ] Loading and error states in the interface, for when a service is slow or down.
+- [x] WFS: `src/network/sections.ts` fetches `lhkiel:Trassenabschnitte` as GeoJSON and checks every feature with type guards on `unknown` into a typed `Section`. `useSections` keeps the sections in a `shallowRef`, so OpenLayers geometries are not wrapped in deep reactive proxies.
+- [x] Attributions for both sources, always expanded (both licenses are CC BY 4.0 and require them).
+- [x] Loading and error states: a status line (`role="status"`) and a "Try again" button.
 
 ## Step 3: Lines in colors, with a legend
 
@@ -97,14 +102,14 @@ Goal: a typed description of the lines that the rest of the application builds o
 ## Step 4: Selecting start and destination
 
 - [ ] Mouse and touch: a click on the map snaps to the nearest point on a line (`getClosestFeatureToCoordinate` and `getClosestPoint`) within a pixel tolerance. Clicks far from every line are ignored with a short hint.
-- [ ] Keyboard and screen reader: a form with two `<select>` elements (start and destination) grouped by line, with `<label>` elements, a swap button and a "Start ride" button. The map click and the form stay in sync.
+- [ ] Keyboard and screen reader: a form with two `<select>` elements (start and destination) listing the named places from `places.ts`, grouped by line, with `<label>` elements, a swap button and a "Start ride" button. A clicked point that is not a named place appears as "Point on line X". The map click and the form stay in sync.
 - [ ] Markers for start and destination; start and destination must differ.
 
 ## Step 5: Routing over the network
 
 Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be tested on its own.
 
-- [ ] Build a graph from the line geometries: nodes at line ends and wherever lines meet (snapped with the tolerance from step 1); edges carry the line ID, the length (`getLength` from `ol/sphere`) and the coordinates.
+- [ ] Reuse the network graph from step 1 and attach the line IDs to its edges (an edge on the trunk carries all four lines).
 - [ ] Insert start and destination into the graph by splitting the edge they lie on.
 - [ ] Dijkstra over (node, line) pairs with a penalty for every change of line, so that routes with fewer changes win.
 - [ ] Result: a list of legs `{ lineId, coordinates, lengthMeters }` and the transfer points.
@@ -124,7 +129,7 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 - [ ] Semantic structure: `header`, `main`, `aside` for controls and legend, `footer` for sources.
 - [ ] CSS grid: map with a side panel on a laptop and on a phone in landscape; the panel below the map on a phone in portrait (media queries on width and orientation, `dvh` units).
-- [ ] Prefer CSS over JavaScript, for example `<details>` for a collapsible panel. The map itself needs `map.updateSize()` from a `ResizeObserver`, one place where JavaScript is unavoidable.
+- [ ] Prefer CSS over JavaScript, for example `<details>` for a collapsible panel. OpenLayers 10 watches the size of the map element itself, so the map follows CSS layout changes without extra code.
 - [ ] Test on a phone in portrait and landscape and on a laptop (a real phone and the DevTools device mode).
 
 ## Step 8: Accessibility
@@ -154,7 +159,7 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Git, public on GitHub | this repository | done |
 | ESLint `@dataport/eslint-config-geodev` | `eslint.config.ts` | done |
 | Vue.js | Vue 3 | done |
-| At least one WMS and one WFS | step 2 | open |
+| At least one WMS and one WFS | basemap.de WMS, Kiel WFS (step 2) | done |
 | OpenLayers or POLAR | OpenLayers 10 | installed |
 | WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8 | open |
 | README with topic, build and run instructions | `README.md` | started |

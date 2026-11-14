@@ -4,12 +4,13 @@ A web map application for the course *Geographical Web Applications* (HAW Kiel, 
 
 Kiel is planning a light rail system (Stadtbahn). This application shows the planned lines on a map, each line in its own color. You select two points on the network, on the same line or on different lines. The map then zooms to the starting point and moves along the line to the destination. If the route needs a change of line, it follows both lines and shows the transfer.
 
-> **Status:** project baseline. The tooling is set up; the map and the simulation are not implemented yet. The step-by-step plan is in [PLAN.md](PLAN.md).
+> **Status:** in development. The map shows the planned route sections on a WMS background map; the lines, the route selection and the ride simulation follow. The step-by-step plan is in [PLAN.md](PLAN.md).
 
 ## Data sources
 
 | Data | Source | Provider, license |
 | --- | --- | --- |
+| Background map | WMS basemap.de Web Raster, layer `de_basemapde_web_raster_grau` ([capabilities](https://sgx.geodatenzentrum.de/wms_basemapde?REQUEST=GetCapabilities&SERVICE=WMS)) | © GeoBasis-DE / BKG, CC BY 4.0 |
 | Planned Stadtbahn route sections (geometry of the whole 35.8 km core network) | WFS, layer `lhkiel:Trassenabschnitte` ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/LHKielWmsWfs/MapServer/WFSServer?service=WFS&request=GetCapabilities), [metadata](https://www.geoportal.de/info/8ae2e3a0-23ff-4551-b71f-3dba6972cb4b)) | © Landeshauptstadt Kiel, CC BY 4.0 |
 | Stadtbahn planning layers (variants, road works, areas per section) | WMS ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/Stadtbahn_WMS/MapServer/WMSServer?service=WMS&request=GetCapabilities)) | © Landeshauptstadt Kiel |
 | Line network (which line runs on which sections) | *Trassenstudie für ein zukunftssicheres ÖPNV-System auf eigener Trasse*, final report, October 2022, section 2.3 ([PDF](https://www.kiel.de/de/umwelt_verkehr/_dokumente_kiel_bewegt_sich/endbericht/kiel_oepnv_system_endbericht_trassenstudie_fuer_ein_zukunftssicheres_oepnv_system_auf_eigener_trasse.pdf)) | Landeshauptstadt Kiel |
