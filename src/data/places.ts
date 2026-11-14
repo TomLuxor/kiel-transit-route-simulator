@@ -10,6 +10,8 @@ export interface PlaceDefinition {
 	readonly name: string
 	/** Longitude and latitude; the place is moved onto the nearest line. */
 	readonly coordinate: Coordinate
+	/** Side of the name on the map, where the default (right) would cover a neighboring place. */
+	readonly labelSide?: 'left'
 }
 
 /**
@@ -37,9 +39,9 @@ export const PLACES: readonly PlaceDefinition[] = [
 	{ id: 'andreas-gayk-strasse', name: 'Andreas-Gayk-Straße / Ziegelteich', coordinate: [10.13312, 54.31811] },
 	{ id: 'mettenhof', name: 'Mettenhof', coordinate: [10.04913, 54.31625] },
 	{ id: 'alfons-jonas-platz', name: 'Alfons-Jonas-Platz', coordinate: [10.14811, 54.31371] },
-	{ id: 'hauptbahnhof', name: 'Hauptbahnhof', coordinate: [10.12894, 54.31088] },
+	{ id: 'hauptbahnhof', name: 'Hauptbahnhof', coordinate: [10.12894, 54.31088], labelSide: 'left' },
 	{ id: 'karlstal', name: 'Karlstal', coordinate: [10.14519, 54.31050] },
-	{ id: 'am-langsee', name: 'Am Langsee', coordinate: [10.16133, 54.30487] },
+	{ id: 'am-langsee', name: 'Am Langsee', coordinate: [10.16133, 54.30487], labelSide: 'left' },
 	{ id: 'sophienhoehe', name: 'Sophienhöhe', coordinate: [10.17056, 54.29751] },
 	{ id: 'elmschenhagen', name: 'Elmschenhagen', coordinate: [10.19431, 54.28880] },
 ]

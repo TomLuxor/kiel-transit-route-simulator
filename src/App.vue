@@ -3,17 +3,21 @@ import { computed, useTemplateRef } from 'vue'
 
 import LineLegend from '@/components/LineLegend.vue'
 import MapView from '@/components/MapView.vue'
+import RouteForm from '@/components/RouteForm.vue'
 import { useNetwork } from '@/composables/useNetwork'
+import { useRouteSelection } from '@/composables/useRouteSelection'
 import { type LoadStatus, useSections } from '@/composables/useSections'
 import { MAP_PROJECTION } from '@/map/config'
 import { itemAt } from '@/network/graph'
 
 const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
 const model = useNetwork(sections)
+const { start, destination, clickTarget, message: selectionMessage, choose, chooseOnMap, swap } = useRouteSelection()
 const statusMessage = useTemplateRef<HTMLParagraphElement>('statusMessage')
 
 const network = computed(() => model.value.state === 'ready' ? model.value.network : undefined)
 const lines = computed(() => model.value.state === 'ready' ? model.value.lines : [])
+const places = computed(() => model.value.state === 'ready' ? model.value.places : [])
 
 /** Loading the WFS and laying the lines onto it both have to succeed. */
 const status = computed<LoadStatus>(() => model.value.state === 'error' ? 'error' : loadStatus.value)
@@ -129,13 +133,26 @@ function retry (): void {
 			<MapView
 				:network="network"
 				:lines="lines"
+				:places="places"
+				:start="start"
+				:destination="destination"
+				@pick="chooseOnMap"
 			/>
 			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
 			<aside
 				class="side-panel"
-				aria-label="Line overview"
+				aria-label="Route and lines"
 				tabindex="0"
 			>
+				<RouteForm
+					v-model:click-target="clickTarget"
+					:places="places"
+					:start="start"
+					:destination="destination"
+					:message="selectionMessage"
+					@choose="choose"
+					@swap="swap"
+				/>
 				<LineLegend :lines="lines" />
 			</aside>
 		</div>
@@ -239,11 +256,19 @@ function retry (): void {
 }
 
 .side-panel {
+	display: grid;
+	gap: var(--kern-metric-space-large);
+	align-content: start;
 	max-height: 40dvh;
 	overflow-y: auto;
 	padding: var(--kern-metric-space-default);
 	background: var(--kern-color-layout-background-default);
 	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+}
+
+/* Inside the panel, so that the outline does not cover the map. More specific than the general rule in main.css. */
+.app-content .side-panel[tabindex]:focus-visible {
+	outline-offset: -4px;
 }
 
 @media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {

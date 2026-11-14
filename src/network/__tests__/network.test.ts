@@ -1,21 +1,14 @@
 import type { Coordinate } from 'ol/coordinate'
 
-import { readFileSync } from 'node:fs'
-import { fromLonLat } from 'ol/proj'
 import { describe, expect, it } from 'vitest'
 
-import { LINES } from '@/data/lines'
 import { PLACES } from '@/data/places'
-import { MAP_PROJECTION } from '@/map/config'
 
 import { closestPosition, distanceMeters, pairs, splitPolyline } from '../geometry'
 import { buildNetwork, DEFAULT_TOLERANCE_METERS, findShortestPath, itemAt, nearestNode, type NetworkPart } from '../graph'
-import { resolveLine } from '../lines'
 import { resolvePlace } from '../places'
-import { readSections, sectionParts } from '../sections'
-
-/** Longitude and latitude to map coordinates; at Kiel, 0.001° is about 65 m east-west and 111 m north-south. */
-const at = (lon: number, lat: number): Coordinate => fromLonLat([lon, lat], MAP_PROJECTION)
+import { sectionParts } from '../sections'
+import { at, lines, network, sections } from './kielNetwork'
 
 const part = (sectionId: number, ...lonLats: [number, number][]): NetworkPart => ({
 	sectionId,
@@ -70,11 +63,6 @@ describe('network graph', () => {
 })
 
 describe('the Kiel Stadtbahn network (WFS snapshot of 14 November 2026)', () => {
-	const data: unknown = JSON.parse(readFileSync(new URL('fixtures/trassenabschnitte.geojson', import.meta.url), 'utf8'))
-	const sections = readSections(data, MAP_PROJECTION)
-	const network = buildNetwork(sectionParts(sections))
-	const lines = LINES.map(line => resolveLine(network, line))
-
 	it('reads all 16 route sections', () => {
 		expect(sections).toHaveLength(16)
 	})

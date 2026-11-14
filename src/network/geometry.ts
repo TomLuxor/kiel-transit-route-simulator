@@ -40,25 +40,37 @@ export interface PolylinePosition {
 	readonly distanceMeters: number
 }
 
-/** The point on a polyline closest to `point`. Web Mercator is conformal, so planar projection is accurate enough locally. */
+/** Distance in map units; in Web Mercator divided by the resolution, it gives the distance in screen pixels. */
+export function planarDistance ([ax = 0, ay = 0]: Coordinate, [bx = 0, by = 0]: Coordinate): number {
+	return Math.hypot(bx - ax, by - ay)
+}
+
+/**
+ * The point on a polyline closest to `point`. Web Mercator is conformal, so comparing planar distances finds
+ * the same point as comparing distances on the ground; only the result is measured in meters. This runs on
+ * every pointer move over the map.
+ */
 export function closestPosition (coordinates: readonly Coordinate[], point: Coordinate): PolylinePosition {
 	const [px = 0, py = 0] = point
-	let best: PolylinePosition | undefined
+	let best: Omit<PolylinePosition, 'distanceMeters'> | undefined
+	let bestSquaredDistance = Infinity
 	for (const [[ax = 0, ay = 0], [bx = 0, by = 0], segment] of pairs(coordinates)) {
 		const dx = bx - ax
 		const dy = by - ay
 		const squaredLength = dx * dx + dy * dy
 		const fraction = squaredLength === 0 ? 0 : Math.min(1, Math.max(0, ((px - ax) * dx + (py - ay) * dy) / squaredLength))
-		const coordinate = [ax + fraction * dx, ay + fraction * dy]
-		const distance = distanceMeters(point, coordinate)
-		if (!best || distance < best.distanceMeters) {
-			best = { segment, fraction, coordinate, distanceMeters: distance }
+		const x = ax + fraction * dx
+		const y = ay + fraction * dy
+		const squaredDistance = (px - x) ** 2 + (py - y) ** 2
+		if (squaredDistance < bestSquaredDistance) {
+			best = { segment, fraction, coordinate: [x, y] }
+			bestSquaredDistance = squaredDistance
 		}
 	}
 	if (!best) {
 		throw new Error('A polyline needs at least two coordinates.')
 	}
-	return best
+	return { ...best, distanceMeters: distanceMeters(point, best.coordinate) }
 }
 
 /** Splits a polyline at the given positions; each position becomes the last point of one piece and the first of the next. */

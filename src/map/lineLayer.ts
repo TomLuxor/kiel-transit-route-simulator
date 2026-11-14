@@ -1,18 +1,17 @@
 import type { Coordinate } from 'ol/coordinate'
-import type { FeatureLike } from 'ol/Feature'
 
 import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
-import Point from 'ol/geom/Point'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import { Circle, Fill, Stroke, Style, Text } from 'ol/style'
+import { Stroke, Style } from 'ol/style'
 
 import type { LineDefinition } from '@/data/lines'
 import type { ResolvedLine } from '@/network/lines'
 
 import { itemAt, type Network } from '@/network/graph'
 
+import { MAP_COLORS } from './colors'
 import { SECTIONS_ATTRIBUTION } from './config'
 import { offsetPolyline } from './offset'
 
@@ -20,18 +19,11 @@ import { offsetPolyline } from './offset'
 const LINE_WIDTH = 4
 /** White outline around a line or a bundle of lines, in pixels per side. */
 const CASING_WIDTH = 2
-const CASING_COLOR = '#ffffff'
 
 /** A track between two junctions and the lines on it, oriented along the first of them. */
 interface TrackDrawing {
-	readonly kind: 'track'
 	readonly coordinates: readonly Coordinate[]
 	readonly lines: readonly LineDefinition[]
-}
-
-interface TerminusDrawing {
-	readonly kind: 'terminus'
-	readonly line: LineDefinition
 }
 
 const casingStyles = new Map<number, Style>()
@@ -39,25 +31,10 @@ function casingStyle (lineCount: number): Style {
 	let style = casingStyles.get(lineCount)
 	if (!style) {
 		style = new Style({
-			stroke: new Stroke({ color: CASING_COLOR, width: lineCount * LINE_WIDTH + 2 * CASING_WIDTH, lineCap: 'round', lineJoin: 'round' }),
+			stroke: new Stroke({ color: MAP_COLORS.casing, width: lineCount * LINE_WIDTH + 2 * CASING_WIDTH, lineCap: 'round', lineJoin: 'round' }),
 			zIndex: 0,
 		})
 		casingStyles.set(lineCount, style)
-	}
-	return style
-}
-
-const badgeStyles = new Map<string, Style>()
-/** The line number on a disc in the line color, as on transit signs. */
-function badgeStyle (line: LineDefinition): Style {
-	let style = badgeStyles.get(line.id)
-	if (!style) {
-		style = new Style({
-			image: new Circle({ radius: 12, fill: new Fill({ color: line.color }), stroke: new Stroke({ color: CASING_COLOR, width: 2 }) }),
-			text: new Text({ text: line.id, font: '600 14px "Fira Sans", sans-serif', fill: new Fill({ color: line.onColor }) }),
-			zIndex: 2,
-		})
-		badgeStyles.set(line.id, style)
 	}
 	return style
 }
@@ -95,45 +72,21 @@ function trackDrawings (network: Network, lines: readonly ResolvedLine[]): Track
 			tracks.set(edgeId, { coordinates: forward ? edge.coordinates : [...edge.coordinates].reverse(), lines: [line.definition] })
 		}
 	}
-	return [...tracks.values()].map(track => ({ kind: 'track', ...track }))
+	return [...tracks.values()]
 }
 
-/** A layer with the colored lines and a badge at both ends of each line. */
+/** A layer with the colored lines; the badges at their ends are part of the place layer. */
 export function createLineLayer (): { layer: VectorLayer, showLines: (network: Network, lines: readonly ResolvedLine[]) => void } {
 	const source = new VectorSource({ attributions: SECTIONS_ATTRIBUTION })
-	// Drawing data per feature, typed, instead of untyped feature properties.
-	let drawings = new WeakMap<FeatureLike, TrackDrawing | TerminusDrawing>()
-
-	const layer = new VectorLayer({
-		source,
-		style: (feature, resolution) => {
-			const drawing = drawings.get(feature)
-			if (!drawing) {
-				return []
-			}
-			return drawing.kind === 'track' ? trackStyles(drawing, resolution) : [badgeStyle(drawing.line)]
-		},
-	})
+	const layer = new VectorLayer({ source })
 
 	function showLines (network: Network, lines: readonly ResolvedLine[]): void {
-		drawings = new WeakMap()
-		const features: Feature[] = []
-		for (const drawing of trackDrawings(network, lines)) {
-			const feature = new Feature(new LineString([...drawing.coordinates]))
-			drawings.set(feature, drawing)
-			features.push(feature)
-		}
-		for (const line of lines) {
-			for (const end of [line.coordinates[0], line.coordinates[line.coordinates.length - 1]]) {
-				if (end) {
-					const feature = new Feature(new Point(end))
-					drawings.set(feature, { kind: 'terminus', line: line.definition })
-					features.push(feature)
-				}
-			}
-		}
 		source.clear()
-		source.addFeatures(features)
+		source.addFeatures(trackDrawings(network, lines).map(drawing => {
+			const feature = new Feature(new LineString([...drawing.coordinates]))
+			feature.setStyle((_, resolution) => trackStyles(drawing, resolution))
+			return feature
+		}))
 	}
 
 	return { layer, showLines }

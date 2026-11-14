@@ -104,9 +104,13 @@ Done after step 2, because the map is the tool for checking the data:
 
 ## Step 4: Selecting start and destination
 
-- [ ] Mouse and touch: a click on the map snaps to the nearest point on a line (`getClosestFeatureToCoordinate` and `getClosestPoint`) within a pixel tolerance. Clicks far from every line are ignored with a short hint.
-- [ ] Keyboard and screen reader: a form with two `<select>` elements (start and destination) listing the named places from `places.ts`, grouped by line, with `<label>` elements, a swap button and a "Start ride" button. A clicked point that is not a named place appears as "Point on line X". The map click and the form stay in sync.
-- [ ] Markers for start and destination; start and destination must differ.
+- [x] Mouse and touch: a click snaps to the nearest point on a line within 20 px, or to a named place within 12 px of its dot (`src/network/routePoints.ts`). A point is named after the nearest place on its line, for example "Point on line 2, 1.1 km from Wik", so the form and screen readers can say where it is. Clicks far from every line are ignored with a hint. Over a line, the pointer changes. The closest-point search compares planar distances, because it runs on every pointer move.
+- [x] Keyboard and screen reader: `RouteForm.vue`, a `<form>` with two labelled KERN selects, a swap button and a radio group "A click on the map sets the start / destination". After the first choice, the map click moves on to the empty endpoint, so two clicks choose start and destination. The places are listed alphabetically with their lines ("Hauptbahnhof (all lines)") instead of grouped by line: grouping would list a place up to four times, and an alphabetical list lets the keyboard jump by first letter. A clicked point appears as an extra option. Map click and form share one state (`useRouteSelection`).
+- [x] Start and destination must differ: the other endpoint's place is disabled in each list, and a choice closer than 50 m to the other endpoint is refused with a message. Results of map clicks and refusals are announced in a `role="status"` region.
+- [x] Markers as in the logo: the start a filled dark disc, the destination a signal-yellow disc in a dark ring, on their own canvas above everything. The form labels show the same markers, so they double as their legend. A point chosen in the form that is outside the view is panned into view (no animation with `prefers-reduced-motion`).
+- [x] The named places on the map: station dots with their names; where a line ends, its badge marks the place. Names that would overlap are left out until the map is zoomed in, the busiest places first; badges and dots are never covered. Hauptbahnhof and Am Langsee have their name on the left.
+- [x] Found on the way: KERN defines its `-contextual` tokens only inside its layer containers, so the app's focus outline (built on one) was invalid and invisible. It now uses `--kern-color-action-focus-default`. KERN also outlines elements with a `tabindex` after a mouse click and not for keyboard focus; the app reverses that. The map's outline is drawn on an overlay, because the OpenLayers viewport covers the map element's own outline.
+- The "Start ride" button moves to step 6, where it gets something to do.
 
 ## Step 5: Routing over the network
 
@@ -120,6 +124,7 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 ## Step 6: Simulating the ride
 
+- [ ] A "Start ride" button in the route form (the form's submit button).
 - [ ] Zoom to the start with `view.animate({ center, zoom, duration })`.
 - [ ] Follow the route at constant speed: a `requestAnimationFrame` loop computes the position from the distance travelled (`LineString.getCoordinateAt`) and calls `view.setCenter`. Optionally rotate the view to the direction of travel.
 - [ ] A vehicle marker, and the part already travelled highlighted. At a transfer, a short stop and the message "Change from line X to line Y".
@@ -164,6 +169,6 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Vue.js | Vue 3 | done |
 | At least one WMS and one WFS | basemap.de WMS, Kiel WFS (step 2) | done |
 | OpenLayers or POLAR | OpenLayers 10 | installed |
-| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8 | open |
+| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection by keyboard and screen reader done | started |
 | README with topic, build and run instructions | `README.md` | started |
 | 15-minute presentation, slides on Moodle | step 9 | open |

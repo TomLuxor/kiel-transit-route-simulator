@@ -11,7 +11,8 @@
 :root {
 	--app-color-signal: var(--kern-color-yellow-150);
 	--app-color-on-signal: var(--kern-color-black);
-	--app-focus-outline: 4px solid var(--kern-color-action-focus-default-contextual);
+	/* Not the "-contextual" variant: KERN defines that only inside its layer containers, not on :root. */
+	--app-focus-outline: 4px solid var(--kern-color-action-focus-default);
 
 	color-scheme: light dark;
 }
@@ -47,6 +48,20 @@ a {
 }
 
 :focus-visible {
+	outline: var(--app-focus-outline);
+	outline-offset: 2px;
+}
+
+/*
+ * KERN outlines elements with a tabindex (here the map and the side panel) on every focus, also after a
+ * mouse click, and removes the outline for keyboard focus. Here they behave like all other elements: the
+ * outline shows for keyboard focus only. The selectors repeat KERN's, so they win by coming later.
+ */
+[tabindex]:not([tabindex="-1"]):focus {
+	outline: none;
+}
+
+[tabindex]:not([tabindex="-1"]):focus:focus-visible {
 	outline: var(--app-focus-outline);
 	outline-offset: 2px;
 }

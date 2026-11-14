@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { Coordinate } from 'ol/coordinate'
+
 import 'ol/ol.css'
+import { buffer, containsCoordinate } from 'ol/extent'
 import OlMap from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
 import View from 'ol/View'
@@ -7,47 +10,106 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
 import type { Network } from '@/network/graph'
 import type { ResolvedLine } from '@/network/lines'
+import type { ResolvedPlace } from '@/network/places'
 
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
 import { createControls } from '@/map/controls'
 import { createBackgroundLayer } from '@/map/layers'
 import { createLineLayer } from '@/map/lineLayer'
+import { animationDuration } from '@/map/motion'
+import { createPlaceLayer } from '@/map/placeLayer'
+import { createSelectionLayer } from '@/map/selectionLayer'
+import { pickPoint, type RoutePoint } from '@/network/routePoints'
 
 const props = defineProps<{
 	network: Network | undefined
 	lines: readonly ResolvedLine[]
+	places: readonly ResolvedPlace[]
+	start: RoutePoint | undefined
+	destination: RoutePoint | undefined
 }>()
+
+const emit = defineEmits<{
+	/** A click on the map: the chosen point, or undefined if the click was too far from every line. */
+	pick: [point: RoutePoint | undefined]
+}>()
+
+/**
+ * A point chosen in the form is brought into view if it lies closer than this to the map edge, in pixels;
+ * less than the padding of the overview, so that choosing a line end does not move the whole network.
+ */
+const REVEAL_MARGIN_PIXELS = 16
 
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
 const lineLayer = createLineLayer()
+const placeLayer = createPlaceLayer()
+const selectionLayer = createSelectionLayer()
 let map: OlMap | undefined
 
-function showLines (): void {
+function showNetwork (): void {
 	if (!props.network || props.lines.length === 0) {
 		return
 	}
 	lineLayer.showLines(props.network, props.lines)
+	placeLayer.showPlaces(props.places, props.lines)
 	const extent = lineLayer.layer.getSource()?.getExtent()
 	if (map && extent) {
 		map.getView().fit(extent, { padding: [32, 32, 32, 32] })
 	}
 }
 
-watch(() => [props.network, props.lines], showLines)
+/** What a click at `coordinate` would choose at the current zoom. */
+function pointAt (coordinate: Coordinate): RoutePoint | undefined {
+	const resolution = map?.getView().getResolution()
+	return resolution === undefined ? undefined : pickPoint(props.lines, props.places, coordinate, resolution)
+}
+
+/** Pans the map to a newly chosen point if it is outside the visible part or close to its edge. */
+function reveal (point: RoutePoint | undefined): void {
+	const view = map?.getView()
+	const size = map?.getSize()
+	const resolution = view?.getResolution()
+	if (!point || !view || !size || resolution === undefined) {
+		return
+	}
+	const visible = buffer(view.calculateExtent(size), -REVEAL_MARGIN_PIXELS * resolution)
+	if (!containsCoordinate(visible, point.coordinate)) {
+		view.animate({ center: point.coordinate, duration: animationDuration(500) })
+	}
+}
+
+watch(() => [props.network, props.lines, props.places], showNetwork)
+
+watch(() => [props.start, props.destination] as const, ([start, destination], [previousStart]) => {
+	selectionLayer.showSelection(start, destination)
+	reveal(start === previousStart ? destination : start)
+})
 
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
 		controls: createControls(),
-		layers: [createBackgroundLayer(), lineLayer.layer],
+		layers: [createBackgroundLayer(), lineLayer.layer, placeLayer.layer, selectionLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
 			center: fromLonLat(KIEL_CENTER, MAP_PROJECTION),
 			zoom: INITIAL_ZOOM,
 		}),
 	})
-	showLines()
+	// "singleclick" waits until a double click (zoom) is ruled out.
+	map.on('singleclick', event => {
+		if (props.lines.length > 0) {
+			emit('pick', pointAt(event.coordinate))
+		}
+	})
+	map.on('pointermove', event => {
+		if (!event.dragging) {
+			mapElement.value?.classList.toggle('map--pickable', pointAt(event.coordinate) !== undefined)
+		}
+	})
+	showNetwork()
+	selectionLayer.showSelection(props.start, props.destination)
 })
 
 onBeforeUnmount(() => {
@@ -71,6 +133,7 @@ onBeforeUnmount(() => {
 			id="map-help"
 			class="kern-sr-only"
 		>
+			A click or tap on a line chooses the start or the destination; the route form offers the same choice by keyboard.
 			When the map has focus, the arrow keys move the map and the plus and minus keys zoom.
 		</p>
 	</div>
@@ -96,9 +159,26 @@ onBeforeUnmount(() => {
 	height: 100%;
 }
 
-.map:focus-visible {
+/* Over a line, the pointer shows that a click chooses a point there. */
+.map--pickable {
+	cursor: pointer;
+}
+
+/*
+ * Keyboard focus on the map: the OpenLayers viewport would cover an outline on the map element itself, so an
+ * overlay draws it on top, inside the map. The first rule is more specific than the general one in main.css.
+ */
+.map-view .map[tabindex]:focus-visible {
+	outline: none;
+}
+
+.map-view:has(> .map:focus-visible)::after {
+	position: absolute;
+	inset: 0;
+	content: "";
 	outline: var(--app-focus-outline);
 	outline-offset: -4px;
+	pointer-events: none;
 }
 
 /* Map buttons in the style of KERN secondary buttons, 44 px for comfortable touch targets. */
