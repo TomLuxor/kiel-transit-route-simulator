@@ -1,6 +1,6 @@
 # Project plan
 
-Step-by-step plan for the Kiel Light Rail Simulator. Each step ends in a state that runs and passes `npm run lint` and `npm run build`, so it can be committed on its own.
+Step-by-step plan for the Kiel Transit Route Simulator. Each step ends in a state that runs and passes `npm run lint` and `npm run build`, so it can be committed on its own.
 
 ## Assignment
 
@@ -13,14 +13,48 @@ Step-by-step plan for the Kiel Light Rail Simulator. Each step ends in a state t
 
 - **OpenLayers instead of POLAR.** POLAR 3 is still an alpha release (`3.0.0-alpha.9`) and pins Node `^24.22.1`. OpenLayers gives direct control over the map view, which the ride animation depends on.
 - **Data from the city of Kiel's geoservice** (ArcGIS Server, which offers both WFS 2.0 and WMS). The server sends `Access-Control-Allow-Origin: *`, so the browser can call it directly without a proxy.
+- **WFS endpoint `LHKielWmsWfs`, layer `lhkiel:Trassenabschnitte`**, because it is the one named in the official metadata record and on the open data portal (CC BY 4.0), which makes it easy to cite.
 - **The WFS delivers GeoJSON in EPSG:4326** with `outputFormat=GEOJSON&srsName=EPSG:4326`, which OpenLayers reads without extra projection libraries.
 
 ## What the data looks like
 
-- WFS layer `lhkiel:Stadtbahn_Trassenabschnitte`: 16 MultiLineString features with the attributes `name` ("Abschnitt 1" to "Abschnitt 11"), `laenge`, `laenge_m` and `datum` (January 2025). Some sections consist of several features: Abschnitt 2 has 3, Abschnitt 5 has 2, Abschnitt 10 has 3 (one of them only 14 m long).
-- **The layer has no line attribute.** It describes route sections, not lines. The state government speaks of four lines and 35.8 km of track; line 1 is reported to run from the university of applied sciences via Gaarden, the main station and Holtenauer Straße to Suchsdorf. Step 1 has to establish which sections each line uses.
+### Sources checked (14 November 2026)
+
+| Source | What it has | Use |
+| --- | --- | --- |
+| [GDI-DE metadata record](https://www.geoportal.de/info/8ae2e3a0-23ff-4551-b71f-3dba6972cb4b) "Stadtbahn Kiel – Trassenabschnitte" (Stabsstelle Stadtbahn, 2025-10-07) | Official description of the route sections, license CC BY 4.0, points to the WFS `LHKielWmsWfs`, layer `lhkiel:Trassenabschnitte`. The same dataset is on opendata.schleswig-holstein.de. | **Main WFS** |
+| `Stadtplan/Stadtbahn_IBS1` (WMS and WFS) | The same 16 route sections (layer `lhkiel:Stadtbahn_Trassenabschnitte`, coordinates identical to 1 mm), plus planning layers for the first stage: `IBS_*` road works and areas (October 2025), trees, the Ramboll alignment `IBS1_01_V3_Trasse_Ramboll`. | Alternative endpoint |
+| `Stadtplan/Stadtbahn_WMS` (WMS and WFS, not listed in the service directory but public) | 240 layers: for each section AB01 to AB11 the alignment variants (V1, V2, …), road works, areas and trees. Variants, not the chosen network. | Optional WMS overlay |
+| `Stadtplan/StadtplanKiel`, group "Stadtbahn Planung" | Section outlines as polygons (2023). | Not needed |
+| [Final report of the route study](https://www.kiel.de/de/umwelt_verkehr/_dokumente_kiel_bewegt_sich/endbericht/kiel_oepnv_system_endbericht_trassenstudie_fuer_ein_zukunftssicheres_oepnv_system_auf_eigener_trasse.pdf) (October 2022), section 2.3, figure 11 | **The official line network:** four lines with routes and lengths. PDF only. | Line definitions |
+| [Stadtbahn brochure 2025](https://www.kiel.de/de/umwelt_verkehr/_dokumente_kiel_bewegt_sich/kiel_stadtbahn_broschuere_2025.pdf), pages 12 and 13 | Network map with the first stage and "approximate stops". PDF only. | Stop positions (approximate) |
+| [German Wikipedia: Stadtbahn Kiel](https://de.wikipedia.org/wiki/Stadtbahn_Kiel) | Stop sequence of every line (63 stops), taken from the planning documents. No coordinates. | Stop names and order |
+
+Searched without further results: all 16 folders of the Kiel ArcGIS server, the GDI-DE catalogue (CSW), opendata.schleswig-holstein.de, ArcGIS Online. OpenStreetMap (Overpass) could not be reached during the research. **No public service has line geometries or stops, and nothing sits behind a login that a student could get.** The Stabsstelle Stadtbahn (stadtbahn@kiel.de, 0431 901-3077) may share stop positions on request.
+
+### The route sections
+
+- WFS `lhkiel:Trassenabschnitte`: 16 MultiLineString features (29 line parts), attributes `ogr_fid`, `Name` ("Abschnitt 1" to "Abschnitt 11"), `Länge` (text such as "3,5 km"), `Länge__m_` (number) and `Datum` (06.01.2025). The REST interface names the same fields `name`, `laenge`, `laenge_m`, `datum`; the WFS GeoJSON uses the names above.
+- **Together they are 36.2 km: the complete core network of 35.8 km plus the depot access track.** The geometry is complete; only the line assignment and the stops are missing.
+- Several sections consist of more than one feature: Abschnitt 2 has 3 (the trunk Hbf to Karlstal, the depot access, depot tracks), Abschnitt 5 has 2, Abschnitt 10 has 3 (two short turning tracks of 21 m and 106 m).
 - The native coordinate system is EPSG:4647 (UTM zone 32N with zone prefix). The WMS offers CRS:84, EPSG:4326, EPSG:25832 and EPSG:4647, but **not EPSG:3857**, the default of OpenLayers.
-- The same service has further planning layers: planning areas and road works (`IBS_*`, October 2025), trees, and an alignment by the planning firm Ramboll (`IBS1_01_V3_Trasse_Ramboll`).
+
+### Topology
+
+- Most sections meet exactly (under 1 m) at shared end points.
+- One gap: the end of Abschnitt 6 at Ziegelteich lies about 50 m from the junction in Abschnitt 3. The snapping tolerance must be about 60 m.
+- **Three branch points lie in the middle of a feature, not at its end:** Torfende (Abschnitt 8, Suchsdorf and Projensdorf branches), Tiefe Allee (Abschnitt 9, FH Kiel and Dietrichsdorf branches) and the turning track of line 4 in Abschnitt 10. The graph must split lines where another line's end point touches them, not only at end points.
+
+### The line network (route study 2022, figure 11)
+
+| Line | Route | Length | Sections used (my reading of figure 11, to check on the map) |
+| --- | --- | --- | --- |
+| 1 | FH Kiel (Neumühlen) – Wellingdorf – Gaarden – Hbf – Holtenauer Straße – CAU – Steenbeker Weg – Suchsdorf | 15.7 km | 9 (FH Kiel branch), 1, 2, 3, 4, 8 (Suchsdorf branch) |
+| 2 | Elmschenhagen – Preetzer Straße – Gaarden – Hbf – Holtenauer Straße – Wik | 13.2 km | 11, 10, 2 (Hbf to Karlstal), 3, 4 (Dreiecksplatz to Ansgarkirche), 5 |
+| 3 | Dietrichsdorf – Wellingdorf – Gaarden-Ost – Hbf – Kronshagener Weg – Mettenhof | 15.6 km | 9 (Dietrichsdorf branch), 1, 2, 3 (Hbf to Ziegelteich), 6, 7 |
+| 4 (extra service) | Berufsbildungszentrum Gaarden – Hbf – Holtenauer Straße – CAU – Projensdorf | 9.5 km | 10 (to the turning track), 2 (Hbf to Karlstal), 3, 4, 8 (Projensdorf branch) |
+
+The trunk from Hbf to Karlstal is shared by all four lines. Wikipedia names the termini slightly differently (line 1 to Rungholtplatz, line 2 to Isarweg, line 4 to Am Langsee); they are the same places.
 
 ## Step 0: Baseline (done)
 
@@ -34,12 +68,13 @@ Step-by-step plan for the Kiel Light Rail Simulator. Each step ends in a state t
 
 Goal: a typed description of the lines that the rest of the application builds on.
 
-- [ ] Find the official line network (kiel.de/stadtbahn, council documents, the presentations of the preferred route): which sections belong to which line, and the line names or numbers.
-- [ ] Check whether any service already offers line geometries or stops (Kiel geoportal, `IBS1_01_V3_Trasse_Ramboll`, opendata.schleswig-holstein.de). If so, use it directly.
-- [ ] Otherwise write `src/data/lines.ts`: an interface such as `LineDefinition { id, name, color, sectionIds }` that maps each line to the WFS features (`ogr_fid`). Cite the source in the README.
-- [ ] Check the topology: do the sections meet exactly at their ends, or are there gaps? This sets the snapping tolerance in step 5.
-- [ ] Decide what a selectable "point" is: stops (if data exists), section ends and junctions, or any point on a line.
-- [ ] If it stays unclear whether sections may stand in for lines, ask the lecturer early.
+- [x] Find the official line network: four lines, route study 2022 (see above).
+- [x] Check whether any service already offers line geometries or stops: none does (see above).
+- [x] Check the topology: one gap of about 50 m, three branch points in the middle of features (see above).
+- [ ] Draw the 16 WFS features with their `ogr_fid` on the map and confirm the section table above.
+- [ ] Write `src/data/lines.ts`. Because three lines branch in the middle of a feature, a line cannot be a list of whole features. Instead, define each line by its two termini and, where needed, a via point (`LineDefinition { id, name, color, stops: Coordinate[] }`), and let the routing graph from step 5 find the geometry between them. This keeps the official WFS as the only geometry source.
+- [ ] Decide what a selectable "point" is. Recommended: the 63 stops, placed by hand on the WFS geometry from the brochure map and the Wikipedia stop lists, marked as approximate in the interface and the README. Fallback: any point on a line.
+- [ ] Ask the lecturer early whether building the lines from the route sections is acceptable, since no public layer has the lines themselves. Optional: ask the Stabsstelle Stadtbahn for stop positions.
 
 ## Step 2: Map with WMS and WFS
 

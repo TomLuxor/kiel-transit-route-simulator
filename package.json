@@ -1,5 +1,5 @@
 {
-	"name": "kiel-light-rail-simulator",
+	"name": "kiel-transit-route-simulator",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

@@ -1,4 +1,4 @@
-# Kiel Light Rail Simulator
+# Kiel Transit Route Simulator
 
 A web map application for the course *Geographical Web Applications* (HAW Kiel, winter semester 2026/27).
 
@@ -8,10 +8,13 @@ Kiel is planning a light rail system (Stadtbahn). This application shows the pla
 
 ## Data sources
 
-| Data | Service | Provider |
+| Data | Source | Provider, license |
 | --- | --- | --- |
-| Planned Stadtbahn route sections | WFS, layer `lhkiel:Stadtbahn_Trassenabschnitte` ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/Stadtbahn_IBS1/MapServer/WFSServer?service=WFS&request=GetCapabilities)) | Landeshauptstadt Kiel |
-| Stadtbahn planning layers | WMS ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/Stadtbahn_IBS1/MapServer/WMSServer?service=WMS&request=GetCapabilities)) | Landeshauptstadt Kiel |
+| Planned Stadtbahn route sections (geometry of the whole 35.8 km core network) | WFS, layer `lhkiel:Trassenabschnitte` ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/LHKielWmsWfs/MapServer/WFSServer?service=WFS&request=GetCapabilities), [metadata](https://www.geoportal.de/info/8ae2e3a0-23ff-4551-b71f-3dba6972cb4b)) | © Landeshauptstadt Kiel, CC BY 4.0 |
+| Stadtbahn planning layers (variants, road works, areas per section) | WMS ([capabilities](https://ims.kiel.de/geodatenextern/services/Stadtplan/Stadtbahn_WMS/MapServer/WMSServer?service=WMS&request=GetCapabilities)) | © Landeshauptstadt Kiel |
+| Line network (which line runs on which sections) | *Trassenstudie für ein zukunftssicheres ÖPNV-System auf eigener Trasse*, final report, October 2022, section 2.3 ([PDF](https://www.kiel.de/de/umwelt_verkehr/_dokumente_kiel_bewegt_sich/endbericht/kiel_oepnv_system_endbericht_trassenstudie_fuer_ein_zukunftssicheres_oepnv_system_auf_eigener_trasse.pdf)) | Landeshauptstadt Kiel |
+
+No public service publishes the lines themselves or the stops. The application therefore builds the four lines from the route sections, following the line network of the final report.
 
 ## Tech stack
 
@@ -27,8 +30,8 @@ Kiel is planning a light rail system (Stadtbahn). This application shows the pla
 ## Getting started
 
 ```sh
-git clone https://github.com/TomLuxor/kiel-light-rail-simulator.git
-cd kiel-light-rail-simulator
+git clone https://github.com/TomLuxor/kiel-transit-route-simulator.git
+cd kiel-transit-route-simulator
 npm install
 npm run dev
 ```
