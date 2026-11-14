@@ -2,17 +2,20 @@
 import type { Coordinate } from 'ol/coordinate'
 
 import 'ol/ol.css'
-import { buffer, containsCoordinate } from 'ol/extent'
+import { equals } from 'ol/coordinate'
+import { boundingExtent, buffer, containsCoordinate } from 'ol/extent'
 import OlMap from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
 import View from 'ol/View'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
+import type { RideView } from '@/composables/useRide'
 import type { Network } from '@/network/graph'
 import type { ResolvedLine } from '@/network/lines'
 import type { ResolvedPlace } from '@/network/places'
 import type { Route } from '@/routing/route'
 
+import { LINES } from '@/data/lines'
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
 import { createControls } from '@/map/controls'
 import { createBackgroundLayer } from '@/map/layers'
@@ -30,11 +33,16 @@ const props = defineProps<{
 	start: RoutePoint | undefined
 	destination: RoutePoint | undefined
 	route: Route | undefined
+	ride: RideView | undefined
+	/** Whether a click on a line chooses a point; not during a ride. */
+	picking: boolean
 }>()
 
 const emit = defineEmits<{
 	/** A click on the map: the chosen point, or undefined if the click was too far from every line. */
 	pick: [point: RoutePoint | undefined]
+	/** The user drags the map. */
+	pan: []
 }>()
 
 /**
@@ -42,6 +50,9 @@ const emit = defineEmits<{
  * less than the padding of the overview, so that choosing a line end does not move the whole network.
  */
 const REVEAL_MARGIN_PIXELS = 16
+
+/** Zoom level while following the vehicle: streets and place names are readable. */
+const RIDE_ZOOM = 15
 
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
@@ -116,6 +127,45 @@ watch(() => [props.start, props.destination, props.route] as const, (_, [previou
 	showSelection(previousStart)
 })
 
+/** With reduced motion, the view shows one leg at a time, without animation. */
+function fitLeg (legIndex: number): void {
+	const leg = props.route?.legs[legIndex]
+	if (map && leg) {
+		map.getView().fit(boundingExtent([...leg.coordinates]), { padding: fitPadding(48), maxZoom: 16 })
+	}
+}
+
+/**
+ * The vehicle and the part travelled on every frame. The view zooms to the start, then follows the vehicle;
+ * with reduced motion it jumps from leg to leg instead. When the ride ends, it shows the whole route again.
+ */
+function showRide (ride: RideView | undefined, previous: RideView | undefined): void {
+	const line = LINES.find(candidate => candidate.id === ride?.lineId)
+	selectionLayer.showVehicle(ride && line ? { coordinate: ride.position.coordinate, line } : undefined)
+	routeLayer.showTravelled(ride?.position.travelled ?? [])
+	const view = map?.getView()
+	if (!view) {
+		return
+	}
+	if (!ride) {
+		if (previous) {
+			fitRoute()
+		}
+		return
+	}
+	if (ride.stepped) {
+		if (previous?.state.legIndex !== ride.state.legIndex) {
+			fitLeg(ride.state.legIndex)
+		}
+	} else if (!previous) {
+		view.animate({ center: ride.position.coordinate, zoom: RIDE_ZOOM, duration: animationDuration(1200) })
+	} else if (ride.status === 'running' && !view.getAnimating() && !equals(ride.position.coordinate, previous.position.coordinate)) {
+		view.setCenter(ride.position.coordinate)
+	}
+}
+
+watch(() => props.ride, showRide)
+
 onMounted(() => {
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
@@ -129,14 +179,17 @@ onMounted(() => {
 	})
 	// "singleclick" waits until a double click (zoom) is ruled out.
 	map.on('singleclick', event => {
-		if (props.lines.length > 0) {
+		if (props.picking && props.lines.length > 0) {
 			emit('pick', pointAt(event.coordinate))
 		}
 	})
 	map.on('pointermove', event => {
 		if (!event.dragging) {
-			mapElement.value?.classList.toggle('map--pickable', pointAt(event.coordinate) !== undefined)
+			mapElement.value?.classList.toggle('map--pickable', props.picking && pointAt(event.coordinate) !== undefined)
 		}
+	})
+	map.on('pointerdrag', () => {
+		emit('pan')
 	})
 	showNetwork()
 	showSelection(props.start)

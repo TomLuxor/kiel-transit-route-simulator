@@ -2,6 +2,8 @@ import { ref, shallowRef } from 'vue'
 
 import { isSamePoint, type RoutePoint } from '@/network/routePoints'
 
+import { useAnnouncer } from './useAnnouncer'
+
 export type Endpoint = 'start' | 'destination'
 
 const OTHER: Readonly<Record<Endpoint, Endpoint>> = { start: 'destination', destination: 'start' }
@@ -21,13 +23,8 @@ export const ENDPOINT_WORDS: Readonly<Record<Endpoint, { title: string, nominati
 export function useRouteSelection () {
 	const points = { start: shallowRef<RoutePoint>(), destination: shallowRef<RoutePoint>() }
 	const clickTarget = ref<Endpoint>('start')
-	/** Text for a polite live region: the result of a map click, or why a choice was not taken. */
-	const message = ref('')
-
-	function announce (text: string): void {
-		// A live region only speaks when its text changes, so a repeated message gets an invisible difference.
-		message.value = message.value === text ? `${text}\u00A0` : text
-	}
+	/** For a live region: the result of a map click, or why a choice was not taken. */
+	const { message, announce } = useAnnouncer()
 
 	/** Sets an endpoint; refuses a point where the other endpoint already is and says why. */
 	function choose (endpoint: Endpoint, point: RoutePoint): boolean {

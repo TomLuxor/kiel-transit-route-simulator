@@ -3,9 +3,11 @@ import { computed, useTemplateRef } from 'vue'
 
 import LineLegend from '@/components/LineLegend.vue'
 import MapView from '@/components/MapView.vue'
+import RideControls from '@/components/RideControls.vue'
 import RouteForm from '@/components/RouteForm.vue'
 import RouteSummary from '@/components/RouteSummary.vue'
 import { useNetwork } from '@/composables/useNetwork'
+import { useRide } from '@/composables/useRide'
 import { useRouteSelection } from '@/composables/useRouteSelection'
 import { type LoadStatus, useSections } from '@/composables/useSections'
 import { MAP_PROJECTION } from '@/map/config'
@@ -29,6 +31,14 @@ const route = computed(() => network.value && start.value && destination.value
 const routeDescription = computed(() => route.value && start.value && destination.value
 	? describeRoute(route.value, start.value, destination.value, lines.value, places.value)
 	: undefined)
+
+const ride = useRide(route, routeDescription)
+const { status: rideStatus, speed: rideSpeed, message: rideMessage, view: rideView, progress: rideProgress } = ride
+
+/** Dragging the map during a ride pauses it, so that the view does not jump back to the vehicle while the user looks around. */
+function onMapPan (): void {
+	ride.pause('Fahrt angehalten, weil die Karte verschoben wurde.')
+}
 
 /** Loading the WFS and laying the lines onto it both have to succeed. */
 const status = computed<LoadStatus>(() => model.value.state === 'error' ? 'error' : loadStatus.value)
@@ -148,7 +158,10 @@ function retry (): void {
 				:start="start"
 				:destination="destination"
 				:route="route"
+				:ride="rideView"
+				:picking="rideStatus === 'idle' || rideStatus === 'arrived'"
 				@pick="chooseOnMap"
+				@pan="onMapPan"
 			/>
 			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
 			<aside
@@ -168,7 +181,20 @@ function retry (): void {
 				<RouteSummary
 					:description="routeDescription"
 					:complete="start !== undefined && destination !== undefined"
-				/>
+				>
+					<RideControls
+						v-if="route"
+						v-model:speed="rideSpeed"
+						:status="rideStatus"
+						:progress="rideProgress"
+						:length-meters="route.lengthMeters"
+						:message="rideMessage"
+						@start="ride.start"
+						@pause="ride.pause()"
+						@resume="ride.resume"
+						@stop="ride.stop('Fahrt beendet.')"
+					/>
+				</RouteSummary>
 				<LineLegend :lines="lines" />
 			</aside>
 		</div>

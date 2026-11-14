@@ -127,14 +127,17 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 ## Step 6: Simulating the ride
 
-- [ ] A "Start ride" button in the route form (the form's submit button).
-- [ ] Zoom to the start with `view.animate({ center, zoom, duration })`.
-- [ ] Follow the route at constant speed: a `requestAnimationFrame` loop computes the position from the distance travelled (`LineString.getCoordinateAt`) and calls `view.setCenter`. Optionally rotate the view to the direction of travel.
-- [ ] A vehicle marker, and the part already travelled highlighted. At a transfer, a short stop and the message "Change from line X to line Y".
-- [ ] Controls for pause and resume, stop, and speed (good practice, see WCAG 2.2.2).
-- [ ] With `prefers-reduced-motion`, jump leg by leg instead of moving continuously (WCAG 2.3.3).
-- [ ] A status region with `aria-live="polite"` that announces start, transfers and arrival.
-- [ ] Decide what happens when the user drags the map during a ride: block map interactions, or stop the ride.
+- [x] The ride model is pure TypeScript (`src/routing/ride.ts`): a state (leg, meters on the leg, time left to wait) that `advanceRide` moves on by the time elapsed, and `ridePosition` for the vehicle's coordinate and the way travelled. The distances along a leg are measured on the ground once per leg, so the timing matches the route length in meters; `LineString.getCoordinateAt` would measure in map units instead.
+- [x] `useRide` runs it in a `requestAnimationFrame` loop: start, pause, resume, stop, and a speed that can change during the ride. A frame counts at most 100 ms, so the vehicle does not jump after the tab was in the background.
+- [x] Controls in `RideControls.vue`, right below the route summary so they are in view without scrolling the panel on a laptop: one button that changes from "Fahrt starten" to "Anhalten", "Weiter" and "Noch einmal fahren", so keyboard focus stays on it; "Beenden", which hands focus back to that button; a progress bar ("Gefahren: 5,6 km von 12,2 km"); and the speed (Langsam, Normal, Schnell: 150, 300 and 600 m/s, about 25, 50 and 100 times as fast as a tram). Not the form's submit button as planned: the ride belongs to the route, not to the choice of start and destination.
+- [x] The map waits 1.5 s at the start while it zooms there (zoom 15), then follows the vehicle with `view.setCenter`. The view does not rotate with the direction of travel: a turning map is hard to follow and confuses the north arrow.
+- [x] The vehicle: the front of a tram on a disc in the line color. The part already travelled turns grey (KERN neutral-450), as in navigation apps, instead of being highlighted as planned: the way ahead keeps the colors of its lines, so the next line is visible. At a change, a stop of 1.5 s, and the vehicle takes the new line's color.
+- [x] With `prefers-reduced-motion`, the view shows one leg at a time without animation, the vehicle at its start, and jumps to the next leg after 3 s (WCAG 2.3.3).
+- [x] A status region announces the departure ("Abfahrt: Wik, mit Linie 2."), every change ("Andreas-Gayk-Straße / Ziegelteich: Umstieg in Linie 3."), the arrival ("Angekommen: Mettenhof.") and pauses.
+- [x] Dragging the map pauses the ride ("Fahrt angehalten, weil die Karte verschoben wurde."), so the user can look around and the view does not jump back; zooming during the ride is allowed. A click on the map does not choose points during a ride, and a new start or destination ends the ride.
+- [x] Tests: speed and departure wait, the arrival time from distance and stops, the stop at the change, the vehicle stays on the route and never goes backwards, the way travelled is as long as the distance travelled, reduced motion never stops between the ends of a leg, and `useRide` with a fake animation clock (announcements, pause and resume, a new route ends the ride).
+- [x] Found on the way: the test TypeScript project had no DOM types (`"lib": []` from the project template), which the tests of browser code now need. KERN's progress bar also reads `-contextual` tokens, mapped to the global ones like the focus outline.
+- On a phone in portrait the ride controls are below the map and need scrolling; that is part of step 7.
 
 ## Step 7: Layout and responsive design
 
@@ -172,6 +175,6 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Vue.js | Vue 3 | done |
 | At least one WMS and one WFS | basemap.de WMS, Kiel WFS (step 2) | done |
 | OpenLayers or POLAR | OpenLayers 10 | installed |
-| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection and route description by keyboard and screen reader done, page language German | started |
+| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection, route description and ride by keyboard and screen reader done, reduced motion, page language German | started |
 | README with topic, build and run instructions | `README.md` | started |
 | 15-minute presentation, slides on Moodle | step 9 | open |

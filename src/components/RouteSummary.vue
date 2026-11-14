@@ -36,6 +36,8 @@ defineProps<{
 				Sobald Start und Ziel gewählt sind, steht hier die Verbindung.
 			</template>
 		</p>
+		<!-- The ride controls: right below the summary, so they are in view without scrolling the panel. -->
+		<slot />
 		<ol
 			v-if="description"
 			class="route-summary__legs"

@@ -12,4 +12,6 @@ export const MAP_COLORS = {
 	signal: '#f8cf00',
 	/** KERN black, the text color on signal yellow (`--app-color-on-signal`). */
 	onSignal: '#000000',
+	/** KERN neutral-450, the part of the route already travelled; 3.5:1 against the white casing. */
+	travelled: '#8187a7',
 } as const

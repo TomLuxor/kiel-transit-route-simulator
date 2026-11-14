@@ -22,6 +22,8 @@ export interface RouteDescription {
 	/** One sentence for screen readers, for example "Linie 2 von Wik bis Karlstal, dann Linie 3 bis Mettenhof." */
 	readonly sentence: string
 	readonly legs: readonly LegDescription[]
+	/** Names of the start, each change and the destination; a point chosen on the map is "Startpunkt" or "Zielpunkt". */
+	readonly stops: readonly string[]
 	/** Number of changes. */
 	readonly changes: number
 }
@@ -54,5 +56,6 @@ export function describeRoute (route: Route, start: RoutePoint, destination: Rou
 	})
 	const sentence = legs.map((leg, index) => index === 0 ? `${leg.line.name} ${leg.from} ${leg.to}` : `dann ${leg.line.name} ${leg.to}`).join(', ')
 	const changes = route.legs.length - 1
-	return { summary: `${formatDistance(route.lengthMeters)}, ${describeChanges(changes)}`, sentence: `${sentence}.`, legs, changes }
+	const stops = [start.kind === 'point' ? 'Startpunkt' : start.name, ...changeNames, destination.kind === 'point' ? 'Zielpunkt' : destination.name]
+	return { summary: `${formatDistance(route.lengthMeters)}, ${describeChanges(changes)}`, sentence: `${sentence}.`, legs, stops, changes }
 }
