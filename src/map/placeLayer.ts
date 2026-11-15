@@ -1,5 +1,6 @@
 import type { Coordinate } from 'ol/coordinate'
 
+import { easeOut, inAndOut } from 'ol/easing'
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import VectorLayer from 'ol/layer/Vector'
@@ -13,11 +14,10 @@ import type { ResolvedPlace } from '@/network/places'
 import { distanceMeters } from '@/network/geometry'
 
 import { fadedColor, MAP_COLORS } from './colors'
+import { animationDuration } from './motion'
 
 const BADGE_RADIUS = 12
 const DOT_RADIUS = 5
-/** A station with the start or destination on it: its dot and the ring of its badge 1 px larger. */
-const CHOSEN_GROWTH = 1
 /** Space between a dot or badge and the place name, in pixels. */
 const LABEL_GAP = 8
 /**
@@ -26,53 +26,68 @@ const LABEL_GAP = 8
  */
 const AT_LINE_END_METERS = 5
 
+/** A station with the start or destination pin on it is drawn this much larger: its dot, or its line badge. */
+const CHOSEN_SCALE = { dot: 1.3, badge: 1.1 } as const
+/** When a pin lands on a station, its dot or badge first swells this much beyond that size, then settles. */
+const POP_SCALE = 1.45
+/** Length of that pop in milliseconds; a station the pin leaves shrinks back in half the time. */
+const POP_MS = 450
+/** Share of the pop spent swelling; the rest it settles. */
+const POP_RISE = 0.35
+
+/**
+ * Obstacles keep names off the dots and badges. While a dot or badge pops, it is no obstacle, or its own name
+ * and its neighbors' would blink out for a moment as it swells.
+ */
+function declutterMode (steady: boolean): 'obstacle' | 'none' {
+	return steady ? 'obstacle' : 'none'
+}
+
 /**
  * The line number on a disc in the line color, as on transit signs. Names never cover it. Washed out like
- * its line while another line is highlighted; with a dark ring while the start or destination is on it.
+ * its line while another line is highlighted.
  */
-function badgeStyle (line: LineDefinition, faded: boolean, chosen: boolean): Style {
+function badgeStyle (line: LineDefinition, faded: boolean, scale: number, steady: boolean): Style {
 	return new Style({
 		image: new Circle({
 			radius: BADGE_RADIUS,
+			scale,
 			fill: new Fill({ color: faded ? fadedColor(line.color) : line.color }),
-			stroke: chosen ? new Stroke({ color: MAP_COLORS.ink, width: 3 }) : new Stroke({ color: MAP_COLORS.casing, width: 2 }),
-			declutterMode: 'obstacle',
+			stroke: new Stroke({ color: MAP_COLORS.casing, width: 2 }),
+			declutterMode: declutterMode(steady),
 		}),
 		text: new Text({
 			text: line.id,
+			scale,
 			font: '600 14px "Fira Sans", sans-serif',
 			fill: new Fill({ color: faded ? fadedColor(line.onColor) : line.onColor }),
-			declutterMode: 'obstacle',
+			declutterMode: declutterMode(steady),
 		}),
 	})
 }
 
 /** A station dot on the line. Names never cover it. */
-const dotStyle = new Style({
-	image: new Circle({
-		radius: DOT_RADIUS,
-		fill: new Fill({ color: MAP_COLORS.casing }),
-		stroke: new Stroke({ color: MAP_COLORS.ink, width: 2 }),
-		declutterMode: 'obstacle',
-	}),
-})
+function dotStyle (scale: number, steady: boolean): Style {
+	return new Style({
+		image: new Circle({
+			radius: DOT_RADIUS,
+			scale,
+			fill: new Fill({ color: MAP_COLORS.casing }),
+			stroke: new Stroke({ color: MAP_COLORS.ink, width: 2 }),
+			declutterMode: declutterMode(steady),
+		}),
+	})
+}
 
-/** A station with the start or destination pin on it: the dot a little larger and filled dark. */
-const chosenDotStyle = new Style({
-	image: new Circle({
-		radius: DOT_RADIUS + CHOSEN_GROWTH,
-		fill: new Fill({ color: MAP_COLORS.ink }),
-		stroke: new Stroke({ color: MAP_COLORS.casing, width: 2 }),
-		declutterMode: 'obstacle',
-	}),
-})
+const restingDotStyle = dotStyle(1, true)
 
 /**
  * The name of a place beside its dot or badge; bold while the start or destination is on it, and as much
- * further away as the dot grows, or it would touch its own dot and be left out (on the left side).
+ * further away as the dot or badge has grown, or it would touch it and be left out.
  */
 function labelStyle (place: ResolvedPlace, besideBadge: boolean, chosen: boolean): Style {
-	const offset = (besideBadge ? BADGE_RADIUS : DOT_RADIUS) + LABEL_GAP + (chosen ? CHOSEN_GROWTH : 0)
+	const radius = besideBadge ? BADGE_RADIUS * (chosen ? CHOSEN_SCALE.badge : 1) : DOT_RADIUS * (chosen ? CHOSEN_SCALE.dot : 1)
+	const offset = radius + LABEL_GAP + (chosen ? 1 : 0)
 	const left = place.definition.labelSide === 'left'
 	return new Style({
 		text: new Text({
@@ -100,6 +115,26 @@ interface PlaceFeature {
 	readonly besideBadge: boolean
 }
 
+/** A dot or badge changing size: from one scale to another, through a peak when a pin lands on it. */
+interface Pop {
+	readonly startTime: number
+	readonly duration: number
+	readonly from: number
+	readonly to: number
+	readonly peak: number | undefined
+}
+
+function scaleAt (pop: Pop, time: number): number {
+	const t = Math.min(1, Math.max(0, (time - pop.startTime) / pop.duration))
+	if (pop.peak === undefined) {
+		return pop.from + (pop.to - pop.from) * easeOut(t)
+	}
+	if (t < POP_RISE) {
+		return pop.from + (pop.peak - pop.from) * easeOut(t / POP_RISE)
+	}
+	return pop.peak + (pop.to - pop.peak) * inAndOut((t - POP_RISE) / (1 - POP_RISE))
+}
+
 /**
  * The line number badges at the line ends and the named places as station dots with their names. Where a
  * line ends at a place, the badge marks the place instead of a dot. Names that would overlap a badge, a dot
@@ -118,19 +153,26 @@ export function createPlaceLayer (): {
 	let highlighted: LineId | undefined
 	/** The places the start or destination is on. */
 	let chosen: readonly string[] = []
+	/** The scale of each dot or badge that is not at its normal size, by place ID. */
+	const scales = new Map<string, number>()
+	const pops = new Map<string, Pop>()
+	let frame: number | undefined
 
 	function styleBadges (): void {
 		for (const { feature, line, placeId } of badgeFeatures) {
 			const faded = highlighted !== undefined && highlighted !== line.id
-			feature.setStyle(badgeStyle(line, faded, placeId !== undefined && chosen.includes(placeId)))
+			const scale = placeId === undefined ? 1 : scales.get(placeId) ?? 1
+			feature.setStyle(badgeStyle(line, faded, scale, placeId === undefined || !pops.has(placeId)))
 		}
 	}
 
 	function stylePlaces (): void {
 		for (const { feature, place, besideBadge } of placeFeatures) {
-			const isChosen = chosen.includes(place.definition.id)
-			const label = labelStyle(place, besideBadge, isChosen)
-			feature.setStyle(besideBadge ? label : [isChosen ? chosenDotStyle : dotStyle, label])
+			const id = place.definition.id
+			const label = labelStyle(place, besideBadge, chosen.includes(id))
+			const scale = scales.get(id)
+			const dot = scale === undefined ? restingDotStyle : dotStyle(scale, !pops.has(id))
+			feature.setStyle(besideBadge ? label : [dot, label])
 		}
 	}
 
@@ -159,14 +201,64 @@ export function createPlaceLayer (): {
 		styleBadges()
 	}
 
-	/** Marks the places the start or destination is on; called while a pin is dragged, so only on a change. */
+	/** One animation frame for every dot or badge that pops or shrinks. */
+	function step (time: number): void {
+		frame = undefined
+		for (const [id, pop] of pops) {
+			scales.set(id, scaleAt(pop, time))
+			if (time >= pop.startTime + pop.duration) {
+				pops.delete(id)
+				if (pop.to === 1) {
+					scales.delete(id)
+				}
+			}
+		}
+		styleBadges()
+		stylePlaces()
+		if (pops.size > 0) {
+			frame = requestAnimationFrame(step)
+		}
+	}
+
+	/**
+	 * Marks the places the start or destination is on: their dot or badge pops when a pin lands and stays a
+	 * little larger, and shrinks back when the pin leaves. Called while a pin is dragged, so only on a change.
+	 * With reduced motion the size changes at once.
+	 */
 	function markChosen (placeIds: readonly string[]): void {
 		if (placeIds.length === chosen.length && placeIds.every(id => chosen.includes(id))) {
 			return
 		}
+		const startTime = performance.now()
+		const duration = animationDuration(POP_MS)
+		const atBadge = new Set(badgeFeatures.map(({ placeId }) => placeId))
+		for (const id of new Set([...placeIds, ...chosen])) {
+			const landing = placeIds.includes(id)
+			if (landing === chosen.includes(id)) {
+				continue
+			}
+			const to = landing ? CHOSEN_SCALE[atBadge.has(id) ? 'badge' : 'dot'] : 1
+			if (duration === 0) {
+				pops.delete(id)
+				scales.set(id, to)
+				continue
+			}
+			const from = scales.get(id) ?? 1
+			pops.set(id, landing
+				? { startTime, duration, from, to, peak: to * POP_SCALE }
+				: { startTime, duration: duration / 2, from, to, peak: undefined })
+		}
 		chosen = placeIds
+		for (const [id, scale] of scales) {
+			if (scale === 1 && !pops.has(id)) {
+				scales.delete(id)
+			}
+		}
 		styleBadges()
 		stylePlaces()
+		if (pops.size > 0 && frame === undefined) {
+			frame = requestAnimationFrame(step)
+		}
 	}
 
 	return { layer, showPlaces, highlight, markChosen }
