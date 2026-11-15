@@ -20,7 +20,7 @@ import { findRoute } from '@/routing/route'
 
 const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
 const model = useNetwork(sections)
-const { start, destination, clickTarget, message: selectionMessage, choose, chooseBoth, chooseOnMap, move, swap } = useRouteSelection()
+const { start, destination, clickTarget, message: selectionMessage, messageShown: selectionMessageShown, choose, chooseBoth, chooseOnMap, move, swap } = useRouteSelection()
 const statusMessage = useTemplateRef<HTMLParagraphElement>('statusMessage')
 
 const network = computed(() => model.value.state === 'ready' ? model.value.network : undefined)
@@ -52,14 +52,14 @@ function chooseLine (lineId: LineId): void {
 }
 
 const ride = useRide(route, routeDescription)
-const { status: rideStatus, speed: rideSpeed, message: rideMessage, view: rideView, progress: rideProgress } = ride
+const { status: rideStatus, speed: rideSpeed, message: rideMessage, messageShown: rideMessageShown, view: rideView, progress: rideProgress } = ride
 
 /** A ride is going on (not yet arrived): on small screens, the side panel shows only the ride. */
 const riding = computed(() => rideStatus.value === 'running' || rideStatus.value === 'paused')
 
 /** Dragging the map during a ride pauses it, so that the view does not jump back to the vehicle while the user looks around. */
 function onMapPan (): void {
-	ride.pause('Fahrt angehalten, weil die Karte verschoben wurde.')
+	ride.pause('die Karte verschoben wurde')
 }
 
 /** Loading the WFS and laying the lines onto it both have to succeed. */
@@ -201,6 +201,7 @@ function retry (): void {
 					:start="start"
 					:destination="destination"
 					:message="selectionMessage"
+					:message-shown="selectionMessageShown"
 					@choose="choose"
 					@swap="swap"
 				/>
@@ -216,6 +217,7 @@ function retry (): void {
 					:progress="rideProgress"
 					:length-meters="route.lengthMeters"
 					:message="rideMessage"
+					:message-shown="rideMessageShown"
 					@start="ride.start"
 					@pause="ride.pause()"
 					@resume="ride.resume"
@@ -337,12 +339,18 @@ function retry (): void {
 	min-height: 0;
 }
 
+/*
+ * The scrollbar is always there where the system shows one (Windows), even with nothing to scroll: one that
+ * comes and goes, for example when the line list is closed, moves the whole panel sideways. In KERN's colors,
+ * so that it fits the light and the dark theme.
+ */
 .side-panel {
 	display: grid;
 	gap: var(--kern-metric-space-large);
 	align-content: start;
 	max-height: 40dvh;
-	overflow-y: auto;
+	overflow-y: scroll;
+	scrollbar-color: var(--kern-color-layout-border) var(--kern-color-layout-background-hued);
 	padding: var(--kern-metric-space-default);
 	background: var(--kern-color-layout-background-default);
 	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);

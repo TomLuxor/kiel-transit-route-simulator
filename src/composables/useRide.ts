@@ -53,7 +53,8 @@ export function useRide (
 	const speed = ref<RideSpeed>('normal')
 	const state = shallowRef<RideState>()
 	const stepped = ref(false)
-	const { message, announce } = useAnnouncer()
+	// Read out at departure, changes and arrival; the map and the route list show them, so they are not shown.
+	const { message, shown: messageShown, announce } = useAnnouncer()
 	let frame: number | undefined
 	let lastTime: number | undefined
 
@@ -116,11 +117,19 @@ export function useRide (
 		frame = requestAnimationFrame(tick)
 	}
 
-	function pause (text = 'Fahrt angehalten.'): void {
+	/**
+	 * Pauses the ride. A pause the user asked for is only read out, as the button shows it; a pause for another
+	 * `reason` ("die Karte verschoben wurde") is shown as well, so the user sees why the vehicle stopped.
+	 */
+	function pause (reason?: string): void {
 		if (status.value === 'running') {
 			cancelFrames()
 			status.value = 'paused'
-			announce(text)
+			if (reason) {
+				announce(`Fahrt angehalten, weil ${reason}.`, { shown: true })
+			} else {
+				announce('Fahrt angehalten.')
+			}
 		}
 	}
 
@@ -163,5 +172,5 @@ export function useRide (
 		return currentRoute && current && currentRoute.lengthMeters > 0 ? travelledMeters(currentRoute, current) / currentRoute.lengthMeters : 0
 	})
 
-	return { status, speed, message, view, progress, start, pause, resume, stop }
+	return { status, speed, message, messageShown, view, progress, start, pause, resume, stop }
 }

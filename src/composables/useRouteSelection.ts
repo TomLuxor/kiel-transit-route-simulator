@@ -23,16 +23,20 @@ export const ENDPOINT_WORDS: Readonly<Record<Endpoint, { title: string, nominati
 export function useRouteSelection () {
 	const points = { start: shallowRef<RoutePoint>(), destination: shallowRef<RoutePoint>() }
 	const clickTarget = ref<Endpoint>('start')
-	/** For a live region: the result of a map click, or why a choice was not taken. */
-	const { message, announce } = useAnnouncer()
+	/**
+	 * For a live region: what a map click chose (read out only, the form and the map show it), or why a choice
+	 * was not taken (shown as well, as nothing else on the page tells).
+	 */
+	const { message, shown: messageShown, announce, clear } = useAnnouncer()
 
 	/** Sets an endpoint; refuses a point where the other endpoint already is and says why. */
 	function choose (endpoint: Endpoint, point: RoutePoint): boolean {
 		const other = points[OTHER[endpoint]].value
 		if (other && isSamePoint(point, other)) {
-			announce(`Dort liegt schon ${ENDPOINT_WORDS[OTHER[endpoint]].nominative}. Bitte ${ENDPOINT_WORDS[endpoint].another} wählen.`)
+			announce(`Dort liegt schon ${ENDPOINT_WORDS[OTHER[endpoint]].nominative}. Bitte ${ENDPOINT_WORDS[endpoint].another} wählen.`, { shown: true })
 			return false
 		}
+		clear()
 		points[endpoint].value = point
 		if (!other) {
 			clickTarget.value = OTHER[endpoint]
@@ -43,7 +47,7 @@ export function useRouteSelection () {
 	/** A map click: `point` is undefined if the click was too far from every line. */
 	function chooseOnMap (point: RoutePoint | undefined): void {
 		if (!point) {
-			announce('Dort ist keine Linie. Bitte näher an einer Linie klicken oder tippen.')
+			announce('Dort ist keine Linie. Bitte näher an einer Linie klicken oder tippen.', { shown: true })
 			return
 		}
 		const endpoint = clickTarget.value
@@ -80,5 +84,5 @@ export function useRouteSelection () {
 		announce('Start und Ziel getauscht.')
 	}
 
-	return { start: points.start, destination: points.destination, clickTarget, message, choose, chooseBoth, chooseOnMap, move, swap }
+	return { start: points.start, destination: points.destination, clickTarget, message, messageShown, choose, chooseBoth, chooseOnMap, move, swap }
 }

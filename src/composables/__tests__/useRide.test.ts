@@ -83,9 +83,22 @@ describe('riding a route', () => {
 		runFor(3000)
 		expect(ride.progress.value).toBe(paused)
 		expect(ride.message.value).toBe('Fahrt angehalten.')
+		// The button shows a pause the user asked for, so it is only read out.
+		expect(ride.messageShown.value).toBe(false)
 		ride.resume()
 		runFor(1000)
 		expect(ride.progress.value).toBeGreaterThan(paused)
+	})
+
+	it('shows why it paused when the user did not ask for it', () => {
+		const { ride } = setUp('wik', 'belvedere')
+		ride.start()
+		runFor(1000)
+		ride.pause('die Karte verschoben wurde')
+		expect(ride.message.value).toBe('Fahrt angehalten, weil die Karte verschoben wurde.')
+		expect(ride.messageShown.value).toBe(true)
+		ride.resume()
+		expect(ride.messageShown.value).toBe(false)
 	})
 
 	it('ends when start or destination change', async () => {

@@ -76,6 +76,23 @@ describe('choosing start and destination', () => {
 		expect(selection.clickTarget.value).toBe('start')
 	})
 
+	it('shows only what the page does not show anyway: a refusal or a miss, not a confirmation', () => {
+		const selection = useRouteSelection()
+		selection.chooseOnMap(a)
+		expect(selection.messageShown.value).toBe(false)
+		selection.chooseOnMap(undefined)
+		expect(selection.messageShown.value).toBe(true)
+		expect(selection.choose('destination', a)).toBe(false)
+		expect(selection.messageShown.value).toBe(true)
+		// A valid choice in the form removes the refusal, without a word of its own.
+		selection.choose('destination', b)
+		expect(selection.messageShown.value).toBe(false)
+		expect(selection.message.value).toBe('')
+		selection.swap()
+		expect(selection.message.value).toBe('Start und Ziel getauscht.')
+		expect(selection.messageShown.value).toBe(false)
+	})
+
 	it('changes the message text on a repeated miss, so that screen readers announce it again', () => {
 		const selection = useRouteSelection()
 		selection.chooseOnMap(undefined)

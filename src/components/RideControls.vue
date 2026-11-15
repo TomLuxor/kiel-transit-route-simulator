@@ -11,6 +11,8 @@ const props = defineProps<{
 	lengthMeters: number
 	/** Departure, changes and arrival, for the live region. */
 	message: string
+	/** The message is shown, not only read out: a pause the user did not ask for. */
+	messageShown: boolean
 }>()
 
 const speed = defineModel<RideSpeed>('speed', { required: true })
@@ -79,8 +81,9 @@ async function onStop (): Promise<void> {
 					<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
 				</button>
 				<div class="ride-controls__speed">
+					<!-- Not shown: next to the ride button, "Langsam", "Normal" and "Schnell" speak for themselves. -->
 					<label
-						class="ride-controls__speed-label"
+						class="app-visually-hidden"
 						for="ride-speed"
 					>
 						Tempo
@@ -131,6 +134,7 @@ async function onStop (): Promise<void> {
 			</div>
 			<p
 				class="ride-controls__message"
+				:class="{ 'app-visually-hidden': !messageShown }"
 				role="status"
 			>
 				{{ message }}
@@ -199,11 +203,6 @@ async function onStop (): Promise<void> {
 	margin-left: auto;
 }
 
-/* A secondary setting: regular weight, so it does not compete with the labels of the form. */
-.ride-controls__speed-label {
-	font-size: var(--kern-typography-font-size-small-static);
-}
-
 /* Wide enough for "Langsam" next to KERN's arrow. */
 .ride-controls__speed .kern-form-input__select-wrapper {
 	width: 8rem;
@@ -236,7 +235,7 @@ async function onStop (): Promise<void> {
  * A narrow bar (a phone in landscape): the button spans the row and the speed sits below it; "Beenden"
  * stays beside the distance, and screen readers still hear "Gefahren".
  */
-@container ride-controls (width < 22rem) {
+@container ride-controls (width < 18.5rem) {
 	.ride-controls__main {
 		flex: 1 0 100%;
 	}

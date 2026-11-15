@@ -4,6 +4,7 @@ import { computed, nextTick } from 'vue'
 import type { ResolvedPlace } from '@/network/places'
 
 import { type Endpoint, ENDPOINT_WORDS } from '@/composables/useRouteSelection'
+import { PIN } from '@/map/pin'
 import { describeLines, placePoint, type RoutePoint } from '@/network/routePoints'
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const props = defineProps<{
 	destination: RoutePoint | undefined
 	/** Result of the last map click or refused choice, for the live region. */
 	message: string
+	/** The message is shown, not only read out: a refused choice or a click beside the lines. */
+	messageShown: boolean
 }>()
 
 const clickTarget = defineModel<Endpoint>('clickTarget', { required: true })
@@ -70,37 +73,29 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 					class="kern-label route-form__label"
 					:for="`route-${field.endpoint}`"
 				>
-					<!-- The marker as on the map, so that the label doubles as its legend. -->
+					<!-- The pin as on the map, so that the label doubles as its legend; cut to the pin and its outline. -->
 					<svg
 						class="route-form__marker"
-						viewBox="0 0 28 28"
-						width="28"
-						height="28"
+						viewBox="2 2 32 46"
+						width="16"
+						height="23"
 						aria-hidden="true"
 						focusable="false"
 					>
-						<circle
-							class="route-form__marker-halo"
-							cx="14"
-							cy="14"
-							r="13"
+						<path
+							class="route-form__marker-outline"
+							:d="PIN.path"
 						/>
-						<template v-if="field.endpoint === 'start'">
-							<circle
-								class="route-form__marker-start"
-								cx="14"
-								cy="14"
-								r="9.5"
-							/>
-						</template>
-						<template v-else>
-							<circle
-								class="route-form__marker-destination"
-								cx="14"
-								cy="14"
-								r="9"
-							/>
-						</template>
+						<path
+							:class="`route-form__marker-${field.endpoint}`"
+							:d="PIN.path"
+						/>
+						<circle
+							:class="`route-form__marker-${field.endpoint}-dot`"
+							:cx="PIN.dot.x"
+							:cy="PIN.dot.y"
+							:r="PIN.dot.radius"
+						/>
 					</svg>
 					{{ field.title }}
 				</label>
@@ -181,8 +176,10 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 				</div>
 			</div>
 		</fieldset>
+		<!-- Always in the page for screen readers; seen only when it tells what the page does not show. -->
 		<p
 			class="route-form__message"
+			:class="{ 'app-visually-hidden': !messageShown }"
 			role="status"
 		>
 			{{ message }}
@@ -226,23 +223,35 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 
 .route-form__marker {
 	flex: none;
-	width: 1.5rem;
+	width: auto;
 	height: 1.5rem;
 }
 
-/* The same colors as the markers on the map (src/map/selectionLayer.ts). */
+/* The same colors as the pins on the map (src/map/selectionLayer.ts). */
+.route-form__marker-outline {
+	fill: var(--kern-color-white);
+	stroke: var(--kern-color-white);
+	stroke-width: 5;
+	stroke-linejoin: round;
+}
+
 .route-form__marker-start {
 	fill: var(--app-color-on-signal);
 }
 
-.route-form__marker-halo {
+.route-form__marker-start-dot {
 	fill: var(--kern-color-white);
 }
 
 .route-form__marker-destination {
 	fill: var(--app-color-signal);
 	stroke: var(--app-color-on-signal);
-	stroke-width: 4;
+	stroke-width: 2.5;
+	stroke-linejoin: round;
+}
+
+.route-form__marker-destination-dot {
+	fill: var(--app-color-on-signal);
 }
 
 /*

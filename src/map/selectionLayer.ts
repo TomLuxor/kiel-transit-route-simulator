@@ -13,23 +13,37 @@ import type { LineDefinition, LineId } from '@/data/lines'
 import type { RoutePoint } from '@/network/routePoints'
 
 import { MAP_COLORS } from './colors'
+import { PIN } from './pin'
 
 /**
- * Start and destination as in the logo: the start a filled dark disc, the destination a signal-yellow disc
- * in a dark ring. They differ in shape, not only in color. Both sit on the same white halo, which sets them
- * off from the lines and covers the station dot or line badge below, so a marker on a place replaces its dot.
- * A change of line is a white disc in a dark ring, larger than the dots of the places.
+ * A pin (see pin.ts) as an SVG drawing: a faint shadow under the tip, a white outline that sets it off from
+ * lines and map, the body, and the dot in its head.
  */
-const halo = new Style({ image: new Circle({ radius: 13, fill: new Fill({ color: MAP_COLORS.casing }) }) })
+function pinSvg (body: string, outline: string | undefined, dot: string): string {
+	const { width, height, path, dot: { x, y, radius } } = PIN
+	const stroke = outline ? ` stroke="${outline}" stroke-width="2.5"` : ''
+	return `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}" viewBox="0 0 ${String(width)} ${String(height)}">
+		<ellipse cx="${String(PIN.tip[0])}" cy="${String(PIN.tip[1] + 1)}" rx="6" ry="2" fill="#000000" fill-opacity="0.3"/>
+		<path d="${path}" fill="${MAP_COLORS.casing}" stroke="${MAP_COLORS.casing}" stroke-width="5" stroke-linejoin="round"/>
+		<path d="${path}" fill="${body}"${stroke} stroke-linejoin="round"/>
+		<circle cx="${String(x)}" cy="${String(y)}" r="${String(radius)}" fill="${dot}"/>
+	</svg>`
+}
+
+function pinStyle (svg: string): Style {
+	return new Style({
+		image: new Icon({ src: `data:image/svg+xml,${encodeURIComponent(svg)}`, anchor: [...PIN.tip], anchorXUnits: 'pixels', anchorYUnits: 'pixels' }),
+	})
+}
+
+/**
+ * Start and destination as pins, in the colors of the logo: the start black with a white dot, the destination
+ * signal yellow in a black outline with a black dot; they differ in lightness, not only in hue. A change of
+ * line is a white disc in a dark ring, larger than the dots of the places.
+ */
 const MARKER_STYLES: Readonly<Record<'start' | 'destination' | 'change', Style[]>> = {
-	start: [
-		halo,
-		new Style({ image: new Circle({ radius: 9.5, fill: new Fill({ color: MAP_COLORS.onSignal }) }) }),
-	],
-	destination: [
-		halo,
-		new Style({ image: new Circle({ radius: 9, fill: new Fill({ color: MAP_COLORS.signal }), stroke: new Stroke({ color: MAP_COLORS.onSignal, width: 4 }) }) }),
-	],
+	start: [pinStyle(pinSvg(MAP_COLORS.onSignal, undefined, MAP_COLORS.casing))],
+	destination: [pinStyle(pinSvg(MAP_COLORS.signal, MAP_COLORS.onSignal, MAP_COLORS.onSignal))],
 	change: [new Style({
 		image: new Circle({ radius: 8, fill: new Fill({ color: MAP_COLORS.casing }), stroke: new Stroke({ color: MAP_COLORS.ink, width: 3 }) }),
 	})],
@@ -58,13 +72,13 @@ function vehicleStyle (line: LineDefinition): Style {
 	return style
 }
 
-/** Where a point chosen on the map lies, in a box above its marker, so the list in the form can stay short. */
+/** Where a point chosen on the map lies, in a box above its pin, so the list in the form can stay short. */
 function nearbyStyle (text: string): Style {
 	return new Style({
 		text: new Text({
 			text,
 			font: '500 14px "Fira Sans", sans-serif',
-			offsetY: -30,
+			offsetY: -56,
 			fill: new Fill({ color: MAP_COLORS.ink }),
 			backgroundFill: new Fill({ color: MAP_COLORS.casing }),
 			backgroundStroke: new Stroke({ color: MAP_COLORS.ink, width: 1 }),
