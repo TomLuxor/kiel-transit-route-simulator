@@ -169,7 +169,8 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 ## Step 8: Accessibility
 
-- [ ] Keyboard: everything reachable with Tab, a visible `:focus-visible` style, a logical order. The map element is focusable (`tabindex="0"` and an `aria-label`) so that the OpenLayers keyboard pan and zoom work.
+- [x] Keyboard: everything reachable with Tab, a visible `:focus-visible` style, a logical order. The map element is focusable (`tabindex="0"` and an `aria-label`) so that the OpenLayers keyboard pan and zoom work. Checked with a script that presses Tab through the page and tests at every step whether the outline shows and whether something covers the focused element: before and after choosing a route, during a ride; laptop, low laptop window, phone portrait and landscape. Operated by keys: map (arrows, + and −), "Ganzes Netz zeigen", the lists, "Tauschen", "Kartenklick wählt", the line list (open, close, choose a line; focus highlights the line like the mouse), ride (start with Space or Enter, pause, resume, speed with the arrows, stop). After "Beenden" the focus goes to "Fahrt starten".
+- [x] Fixed on the way: "Ganzes Netz zeigen" came after the attribution links in the Tab order, although it sits below the zoom buttons; it is now added right after them. And on a phone, Tab scrolled the radio buttons "Kartenklick wählt" behind the ride controls that stick to the bottom of the panel (WCAG 2.4.11). The panel now has a `scroll-padding-bottom` of their height (WCAG technique C43).
 - [ ] Screen reader test with NVDA on Windows and with TalkBack or VoiceOver on the phone.
 - [x] Lighthouse accessibility score of 100 % on desktop and mobile (Lighthouse 13.6, production build with `vite preview`, 15 November 2026). Best practices and SEO are also 100; performance 100 on desktop and 96 on mobile, where Lighthouse simulates a slow mobile network and the first paint waits for about 185 kB (gzip) of CSS and JavaScript.
 - [x] Lighthouse sees only the page after loading. So axe-core, the engine behind its accessibility audits, ran in every other state too, with the WCAG 2.2 A/AA and best-practice rules: start chosen, route, ride running, paused, arrived, line list hovered, loading error; light and dark; laptop, phone portrait and landscape. 19 states, no violations.
@@ -200,6 +201,6 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 | Vue.js | Vue 3 | done |
 | At least one WMS and one WFS | basemap.de WMS, Kiel WFS (step 2) | done |
 | OpenLayers or POLAR | OpenLayers 10 | installed |
-| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection, route description and ride by keyboard and screen reader done, reduced motion, page language German; Lighthouse 100 on desktop and mobile, axe without violations in all states, contrast measured | started |
+| WCAG, keyboard, screen reader, Lighthouse 100 % | steps 4, 6 and 8; route selection, route description and ride by screen reader done, keyboard pass done, reduced motion, page language German; Lighthouse 100 on desktop and mobile, axe without violations in all states, contrast measured; NVDA and phone screen reader test open | started |
 | README with topic, build and run instructions | `README.md` | started |
 | 15-minute presentation, slides on Moodle | step 9 | open |

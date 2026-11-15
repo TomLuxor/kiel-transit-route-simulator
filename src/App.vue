@@ -381,6 +381,19 @@ function retry (): void {
 	outline-offset: -4px;
 }
 
+/*
+ * Tab scrolls the focused element into view above the ride controls, which stick to the bottom of the panel,
+ * not behind them (WCAG 2.4.11). Their height with some room: about 7 rem with button and speed, 11 rem with
+ * the progress of a ride.
+ */
+.side-panel:has(.ride-controls) {
+	scroll-padding-bottom: 8rem;
+}
+
+.side-panel:has(.ride-controls__progress) {
+	scroll-padding-bottom: 12rem;
+}
+
 @media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {
 	.app-content {
 		grid-template-rows: minmax(0, 1fr);

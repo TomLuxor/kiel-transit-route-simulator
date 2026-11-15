@@ -325,11 +325,15 @@ function showRide (ride: RideView | undefined, previous: RideView | undefined): 
 watch(() => props.ride, showRide)
 
 onMounted(() => {
+	// Right after the zoom buttons, below which it is shown: OpenLayers adds the controls to the page in this order,
+	// and Tab follows it (before the rotate button at the top right and the attributions at the bottom).
+	const controls = createControls()
+	controls.insertAt(1, createFitControl(() => {
+		fitNetwork(animationDuration(600))
+	}))
 	map = new OlMap({
 		target: mapElement.value ?? undefined,
-		controls: createControls().extend([createFitControl(() => {
-			fitNetwork(animationDuration(600))
-		})]),
+		controls,
 		// The map's own defaults pan and zoom with the mouse wheel only while the map has the focus, because it has a
 		// tabindex; in an app that is all map, it should react at once. Marker dragging comes last, so it sees a
 		// press before panning does.
