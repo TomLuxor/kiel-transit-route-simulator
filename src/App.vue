@@ -352,6 +352,11 @@ function retry (): void {
 	margin: 0;
 }
 
+/* Width of the side panel next to the map: at least 18rem on a phone in landscape, 26rem on laptops (see below). */
+:global(:root) {
+	--app-panel-width: clamp(18rem, 34vw, 26rem);
+}
+
 /* Map and side panel: side by side on laptops and phones in landscape, the panel below the map in portrait. */
 .app-content {
 	display: grid;
@@ -397,8 +402,7 @@ function retry (): void {
 @media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {
 	.app-content {
 		grid-template-rows: minmax(0, 1fr);
-		/* At least 18rem on a phone in landscape; 26rem on laptops, see below. */
-		grid-template-columns: minmax(0, 1fr) clamp(18rem, 34vw, 26rem);
+		grid-template-columns: minmax(0, 1fr) var(--app-panel-width);
 	}
 
 	.side-panel {
@@ -413,8 +417,8 @@ function retry (): void {
  * speed then fit in one row, even next to a Windows scrollbar (17 px).
  */
 @media (min-width: 64rem) {
-	.app-content {
-		grid-template-columns: minmax(0, 1fr) 26rem;
+	:global(:root) {
+		--app-panel-width: 26rem;
 	}
 }
 
@@ -439,6 +443,69 @@ function retry (): void {
 
 	.app-header__title {
 		font-size: var(--kern-typography-font-size-medium-static);
+	}
+}
+
+/*
+ * A narrow header (a phone in portrait, or the side column below): the logo beside the title and the note, which
+ * stand one below the other, instead of the note in a row of its own below the logo. About 25 px lower.
+ */
+@media (max-width: 47.99rem), (orientation: landscape) and (min-width: 36rem) and (max-height: 37.5rem) {
+	.app-header {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0 var(--kern-metric-space-small);
+		padding-block: var(--kern-metric-space-x-small);
+	}
+
+	.app-header__brand {
+		display: contents;
+	}
+
+	.app-logo {
+		grid-row: span 2;
+	}
+
+	.app-header__title {
+		font-size: var(--kern-typography-font-size-medium-static);
+	}
+
+	.app-header__note {
+		line-height: 1.3;
+	}
+}
+
+/*
+ * A phone in landscape: the header moves above the side panel, so the map has the full height. The page grid
+ * gets the two columns of map and panel, and main and its content take them over (subgrid); the order of the
+ * page (header, then main with map and panel) stays the same for keyboard and screen readers.
+ */
+@media (orientation: landscape) and (min-width: 36rem) and (max-height: 37.5rem) {
+	:global(#app) {
+		grid-template-rows: auto minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) var(--app-panel-width);
+	}
+
+	.app-header {
+		z-index: 1;
+		grid-area: 1 / 2;
+		border-left: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	}
+
+	.app-main,
+	.app-content {
+		grid-area: 1 / 1 / -1 / -1;
+		grid-template-rows: subgrid;
+		grid-template-columns: subgrid;
+	}
+
+	.app-content > .map-view,
+	.status-bar {
+		grid-area: 1 / 1 / -1 / 2;
+	}
+
+	.side-panel {
+		grid-area: 2 / 2;
 	}
 }
 

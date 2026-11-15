@@ -79,20 +79,37 @@ const selectionLayer = createSelectionLayer()
 let map: OlMap | undefined
 
 /**
- * Padding for fitting the view, in pixels: the attributions cover the bottom of the map, more so on phones,
- * and the hint, while there is one, the top (MapHint.vue, next to the map element).
+ * Padding for fitting the view, in pixels (top, right, bottom, left): a margin of `pixels`, plus the attributions,
+ * which cover the bottom of the map, more so on phones, and the hint, while there is one, the top (MapHint.vue,
+ * next to the map element).
  */
-function fitPadding (pixels: number): number[] {
+function fitPadding (pixels: number): [number, number, number, number] {
 	const attribution = mapElement.value?.querySelector<HTMLElement>('.ol-attribution')
 	const hint = props.hint && mapElement.value?.parentElement?.querySelector<HTMLElement>('.map-hint')
 	return [pixels + (hint ? hint.offsetTop + hint.offsetHeight : 0), pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
 }
 
+/**
+ * Margin around the whole network, in pixels. Half of it on a small map (a phone's, whose smaller side is below
+ * 480 px), where the full margin, the hint and the attributions would leave the network only half of the height.
+ */
+const NETWORK_MARGIN_PIXELS = 32
+const SMALL_MAP_PIXELS = 480
+
+/**
+ * Room right of the network, in pixels, for the names of its eastern ends (Dietrichsdorf, Elmschenhagen), which
+ * stand right of their badges and would otherwise run off the map where it is narrow.
+ */
+const EAST_NAMES_PIXELS = 120
+
 /** The whole network in view; animated when the user asks for it with the button. */
 function fitNetwork (duration = 0): void {
 	const extent = lineLayer.layer.getSource()?.getExtent()
-	if (map && extent && props.lines.length > 0) {
-		map.getView().fit(extent, { padding: fitPadding(32), duration })
+	const element = mapElement.value
+	if (map && element && extent && props.lines.length > 0) {
+		const small = Math.min(element.clientWidth, element.clientHeight) < SMALL_MAP_PIXELS
+		const [top, right, bottom, left] = fitPadding(small ? NETWORK_MARGIN_PIXELS / 2 : NETWORK_MARGIN_PIXELS)
+		map.getView().fit(extent, { padding: [top, right + EAST_NAMES_PIXELS, bottom, left], duration })
 	}
 }
 
