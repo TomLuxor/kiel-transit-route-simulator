@@ -551,6 +551,18 @@ onBeforeUnmount(() => {
 	color: var(--kern-color-action-default);
 }
 
+/* Phones (portrait, or landscape with little height): the same text, smaller and closer, so it covers less map. */
+@media (max-width: 47.99rem), (max-height: 37.5rem) {
+	.map-view :deep(.ol-attribution) {
+		padding: 0 var(--kern-metric-space-x-small);
+	}
+
+	.map-view :deep(.ol-attribution ul) {
+		font-size: var(--kern-font-size-12);
+		line-height: 1.4;
+	}
+}
+
 /* Dark mode: the grey basemap is inverted, so the map matches KERN's dark theme. */
 @media (prefers-color-scheme: dark) {
 	.map-view :deep(.basemap) {

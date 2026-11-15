@@ -134,9 +134,26 @@ function retry (): void {
 			<h1 class="app-header__title">
 				Stadtbahn-Simulator Kiel
 			</h1>
+			<!-- Only on small screens, where the note below is a popover that this button opens. -->
+			<button
+				class="kern-btn kern-btn--tertiary kern-btn--x-small app-header__info"
+				type="button"
+				popovertarget="app-note"
+			>
+				<span
+					class="kern-icon kern-icon--info"
+					aria-hidden="true"
+				/>
+				<span class="kern-sr-only">Hinweis zum Projekt</span>
+			</button>
 		</div>
-		<p class="app-header__note">
-			Studentisches Projekt, kein offizielles Angebot der Landeshauptstadt Kiel.
+		<!-- So that the app cannot pass as a service of the city. A line of the header on laptops, a popover on small screens. -->
+		<p
+			id="app-note"
+			class="app-header__note"
+			popover
+		>
+			Studentisches Projekt
 		</p>
 	</header>
 	<main class="app-main">
@@ -265,10 +282,43 @@ function retry (): void {
 	line-height: 1.2;
 }
 
+/*
+ * The note is a popover for small screens (below). On laptops it is a line of the header: the browser's popover
+ * styles, which would hide and float it, are undone here.
+ */
 .app-header__note {
+	position: static;
+	display: block;
+	inset: auto;
+	width: auto;
+	height: auto;
 	margin: 0;
+	padding: 0;
+	overflow: visible;
 	color: var(--kern-color-layout-text-muted);
 	font-size: var(--kern-font-size-14);
+	background: none;
+	border: 0;
+}
+
+.app-header__info {
+	display: none;
+	anchor-name: --app-header-info;
+}
+
+/* The color KERN gives icons in tertiary buttons is defined only inside its layer containers. */
+.app-header__info .kern-icon {
+	background-color: var(--kern-color-action-default);
+}
+
+/* KERN outlines a button on every focus; like everywhere in the app, only keyboard focus is outlined. */
+.app-header__info.kern-btn:focus {
+	outline: none;
+}
+
+.app-header__info.kern-btn:focus-visible {
+	outline: var(--app-focus-outline);
+	outline-offset: 2px;
 }
 
 /* Logo: a route between two points on a signal-yellow plate, in the style of a transit sign. */
@@ -447,31 +497,51 @@ function retry (): void {
 }
 
 /*
- * A narrow header (a phone in portrait, or the side column below): the logo beside the title and the note, which
- * stand one below the other, instead of the note in a row of its own below the logo. About 25 px lower.
+ * Small screens (a phone in portrait, or the side column below): only the logo and the title, in one row. The note
+ * is a popover that the info button next to the title opens; a tap beside it or Escape closes it.
  */
 @media (max-width: 47.99rem), (orientation: landscape) and (min-width: 36rem) and (max-height: 37.5rem) {
 	.app-header {
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		gap: 0 var(--kern-metric-space-small);
 		padding-block: var(--kern-metric-space-x-small);
 	}
 
 	.app-header__brand {
-		display: contents;
-	}
-
-	.app-logo {
-		grid-row: span 2;
+		gap: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
 	}
 
 	.app-header__title {
 		font-size: var(--kern-typography-font-size-medium-static);
 	}
 
+	.app-header__info {
+		display: inline-flex;
+		flex: none;
+		margin: 0;
+	}
+
+	.app-header__note:not(:popover-open) {
+		display: none;
+	}
+
+	/* Below the header at the right, where the header ends on every screen; without anchor positioning a fixed top. */
 	.app-header__note {
-		line-height: 1.3;
+		position: fixed;
+		top: 3.5rem;
+		right: var(--kern-metric-space-small);
+		max-width: calc(100vw - 2 * var(--kern-metric-space-small));
+		padding: var(--kern-metric-space-small) var(--kern-metric-space-default);
+		color: var(--kern-color-layout-text-default);
+		background: var(--kern-color-layout-background-default);
+		border: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+		border-radius: var(--kern-metric-border-radius-default);
+		box-shadow: var(--kern-shadow-elevation-low);
+	}
+
+	@supports (anchor-name: --a) {
+		.app-header__note {
+			position-anchor: --app-header-info;
+			top: calc(anchor(bottom) + var(--kern-metric-space-small));
+		}
 	}
 }
 

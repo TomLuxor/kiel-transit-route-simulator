@@ -49,7 +49,7 @@ The interface builds on KERN, the open UX standard for the German public adminis
 - **From KERN:** colors, the typeface Fira Sans, spacing, the focus style, buttons, and the light and dark themes, which follow the system setting.
 - **Own:** the logo, the line colors, the route display and the map controls, built on KERN's design tokens.
 - **Two color rules:** KERN's action blue marks everything clickable. Signal yellow marks transit elements only, never something clickable, and always carries black text.
-- **Not an official service:** this is a student project. It states so in the header and does not use KERN's official-website header bar, coats of arms or the KERN logo.
+- **Not an official service:** this is a student project. The header says so ("Studentisches Projekt", on small screens behind an info button next to the title), and the app does not use KERN's official-website header bar, coats of arms or the KERN logo.
 
 KERN's code is used unchanged under the [EUPL 1.2](https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12). Fira Sans is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org) and is served by the application itself, not by an external font service.
 
