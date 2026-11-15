@@ -203,7 +203,7 @@ async function onStop (): Promise<void> {
 .ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--kern-metric-space-small) var(--kern-metric-space-large);
+	gap: var(--kern-metric-space-small) var(--kern-metric-space-x-large);
 	align-items: center;
 }
 
