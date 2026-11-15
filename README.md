@@ -6,9 +6,16 @@ Kiel is planning a light rail system (Stadtbahn). This application shows the pla
 
 The page itself is in German and is called *Stadtbahn-Simulator Kiel*.
 
-**Live:** <https://tomluxor.github.io/kiel-transit-route-simulator/>, published from `main` by GitHub Actions (see [Deployment](#deployment)).
+**Live:** <https://tomluxor.github.io/kiel-transit-route-simulator/>, published from `main` by GitHub Actions (see [Deployment](#deployment)). The step-by-step plan and the decisions behind it are in [PLAN.md](PLAN.md).
 
-> **Status:** in development. The map shows the four planned lines in their own colors, side by side where they share a track, with a legend and the named places. Start and destination can be chosen with a click or tap on a line, or by keyboard in the route form, and dragged along the lines; a line chosen in the legend is ridden from end to end, and pointing at it shows it alone on the map. The app then finds the route with the fewest changes, shows it on the map and describes it in the side panel. The ride simulation zooms to the start and follows a vehicle along the route, stops at every change of line and announces departure, changes and arrival; it can be paused, stopped and run at three speeds, and with reduced motion it moves leg by leg without animation. The layout works on laptops and on phones in portrait and landscape; the accessibility audit follows. The step-by-step plan is in [PLAN.md](PLAN.md).
+## Features
+
+- **The planned network:** the four lines of the route study in their own colors, side by side where they share a track, with their numbers at both ends and 23 named places along them. A button below the zoom buttons shows the whole network again.
+- **Start and destination:** a click or tap on a line, or a choice from two lists in the side panel, which also work by keyboard and screen reader. Both can be swapped and dragged along the lines. A hint on the map says what the next click sets.
+- **The line list:** pointing at a line or focusing it washes out the other lines on the map; choosing it sets start and destination at its two ends, so it can be ridden from end to end.
+- **The route:** the one with the fewest changes, drawn on the map in the colors of its lines and described leg by leg in the side panel.
+- **The ride:** the map zooms to the start and follows a vehicle along the route. It stops at every change, and the part already travelled turns grey. The ride can be paused, stopped and run at three speeds; dragging the map pauses it, so you can look around. Departure, changes and arrival are announced to screen readers. With reduced motion, it shows one leg at a time without animation.
+- **Everywhere:** laptops and phones in portrait and landscape, a light and a dark theme that follow the system setting, the whole interface in German.
 
 ## How the route is found
 
@@ -45,6 +52,45 @@ The interface builds on KERN, the open UX standard for the German public adminis
 - **Not an official service:** this is a student project. It states so in the header and does not use KERN's official-website header bar, coats of arms or the KERN logo.
 
 KERN's code is used unchanged under the [EUPL 1.2](https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12). Fira Sans is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org) and is served by the application itself, not by an external font service.
+
+## Accessibility
+
+The application aims at WCAG 2.2 level AA.
+
+- **Keyboard:** everything can be reached with Tab in a logical order, with a visible focus outline. The map takes the focus too: it moves with the arrow keys and zooms with + and −. Start and destination are chosen in the form, the ride is started, paused and stopped with its buttons, the speed with the arrow keys.
+- **Screen readers:** the page has landmarks and headings and is marked as German (`lang="de"`). What happens on the map is announced in status regions: a chosen point and where it lies, a new route in one sentence, and departure, changes and arrival during the ride. The route is also a list in the side panel.
+- **Not by color alone:** every line carries its number on the map and in the line list. Start and destination are pins in different colors with different dots.
+- **Motion:** with `prefers-reduced-motion`, the map does not glide; the ride shows one leg at a time and moves on every 3 seconds (WCAG 2.3.3).
+- **Dragging:** dragging the pins is an extra; a click or the form does the same (WCAG 2.5.7).
+
+### Results
+
+Lighthouse 13.6 on the live site, 15 November 2026:
+
+| | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | --- | --- |
+| Mobile | 97 | 100 | 100 | 100 |
+| Desktop | 100 | 100 | 100 | 100 |
+
+Lighthouse only checks the page after loading. So [axe-core](https://github.com/dequelabs/axe-core), the engine behind its accessibility audits, also ran in 19 other states (start chosen, route shown, ride running, paused and arrived, a line highlighted, loading error; light and dark; laptop, phone in portrait and in landscape) with the WCAG 2.2 A/AA and best-practice rules: no violations. Contrast was measured on its own, including the map, which neither tool can see: text at least 6.4:1, borders of form fields and buttons at least 4.5:1, lines against their white casing at least 3.5:1, line numbers at least 6:1, pins at least 14:1. The layout was checked in Chrome's device emulation at 1920 × 1080, 1280 × 800, 390 × 844 and 844 × 390 pixels.
+
+To measure it yourself, use the production build, not the development server, whose unminified code and hot reload lower the performance score:
+
+```sh
+npm run build
+npm run preview
+```
+
+Then run Lighthouse from Chrome's DevTools on <http://localhost:4173/>, or on the live site.
+
+### Contrast below 3:1 on purpose
+
+In two states, the map draws lines with less than the 3:1 contrast that WCAG 1.4.11 asks of graphics needed to understand the content:
+
+- While a line in the line list is pointed at or focused, the other lines are washed out (1.4 to 1.7:1).
+- While a route is shown, the rest of the network is dimmed behind it.
+
+Both are context, not content. They point out the line or the route that matters at that moment, and that line or route keeps its full contrast. The washed-out lines come back as soon as the pointer or the focus leaves that line in the list, and every line is also named there.
 
 ## Prerequisites
 
