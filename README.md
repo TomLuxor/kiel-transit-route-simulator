@@ -6,6 +6,8 @@ Kiel is planning a light rail system (Stadtbahn). This application shows the pla
 
 The page itself is in German and is called *Stadtbahn-Simulator Kiel*.
 
+**Live:** <https://tomluxor.github.io/kiel-transit-route-simulator/>, published from `main` by GitHub Actions (see [Deployment](#deployment)).
+
 > **Status:** in development. The map shows the four planned lines in their own colors, side by side where they share a track, with a legend and the named places. Start and destination can be chosen with a click or tap on a line, or by keyboard in the route form, and dragged along the lines; a line chosen in the legend is ridden from end to end, and pointing at it shows it alone on the map. The app then finds the route with the fewest changes, shows it on the map and describes it in the side panel. The ride simulation zooms to the start and follows a vehicle along the route, stops at every change of line and announces departure, changes and arrival; it can be paused, stopped and run at three speeds, and with reduced motion it moves leg by leg without animation. The layout works on laptops and on phones in portrait and landscape; the accessibility audit follows. The step-by-step plan is in [PLAN.md](PLAN.md).
 
 ## How the route is found
@@ -72,3 +74,7 @@ Then open the address that Vite prints, by default <http://localhost:5173>.
 | `npm run lint` | Check the code with ESLint |
 | `npm run lint:fix` | Fix the ESLint findings that can be fixed automatically |
 | `npm run type-check` | Check the types with `vue-tsc` |
+
+## Deployment
+
+The workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs lint, tests and the build on every push and pull request. On a push to `main` it then publishes the build on GitHub Pages (repository settings: *Pages*, source *GitHub Actions*). The build uses relative paths (`base: './'` in `vite.config.ts`), so the same `dist/` works in the Pages subfolder and at the root with `npm run preview`.

@@ -181,8 +181,8 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
 
 ## Step 9: Finishing and submission
 
-- [ ] `npm run lint` and `npm run build` without findings. Optional: a GitHub Actions workflow that runs both on every push.
-- [ ] Optional: deploy to GitHub Pages (set `base` in `vite.config.ts`) for an easy live demo.
+- [x] `npm run lint` and `npm run build` without findings. A GitHub Actions workflow (`.github/workflows/pages.yml`) runs lint, tests and build on every push and pull request.
+- [x] Deployed to GitHub Pages by the same workflow, on every push to `main`: <https://tomluxor.github.io/kiel-transit-route-simulator/>. `base: './'` in `vite.config.ts`, so the build works in the Pages subfolder and at the root alike; checked locally under the subfolder (fonts, icons, tiles, WFS). Both services allow requests from github.io (CORS) and use https.
 - [ ] README: final feature list, data sources and licenses, Lighthouse result, build and run instructions.
 - [ ] Upload the repository link to Moodle.
 - [ ] Slides for 15 minutes: topic, data source, architecture, live demo, requirements checklist, accessibility results, lessons learned. Rehearse with a timer and upload the slides to Moodle.
