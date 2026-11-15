@@ -59,104 +59,127 @@ async function onStop (): Promise<void> {
 
 <template>
 	<!--
-		A bar at the bottom of the side panel: it stays in view while the panel scrolls, on phones too.
-		The first row is the same in every state: the main button and the speed. "Beenden" belongs to the
-		ride under way, so it stands next to how far the ride has come.
+		The end of the route block: it stays in view at the bottom of the side panel while the panel scrolls,
+		on phones too. The first row is the same in every state: the main button and the speed. "Beenden"
+		belongs to the ride under way, so it stands next to how far the ride has come.
 	-->
 	<div
 		class="ride-controls"
 		role="group"
 		aria-label="Fahrt"
 	>
-		<div class="ride-controls__row">
-			<button
-				ref="mainButton"
-				class="kern-btn kern-btn--primary ride-controls__main"
-				type="button"
-				@click="onMain"
-			>
-				<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
-			</button>
-			<div class="ride-controls__speed">
-				<label
-					class="ride-controls__speed-label"
-					for="ride-speed"
+		<div class="ride-controls__bar">
+			<div class="ride-controls__row">
+				<button
+					ref="mainButton"
+					class="kern-btn kern-btn--primary ride-controls__main"
+					type="button"
+					@click="onMain"
 				>
-					Tempo
-				</label>
-				<div class="kern-form-input__select-wrapper">
-					<select
-						id="ride-speed"
-						v-model="speed"
-						class="kern-form-input__select"
+					<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
+				</button>
+				<div class="ride-controls__speed">
+					<label
+						class="ride-controls__speed-label"
+						for="ride-speed"
 					>
-						<option
-							v-for="option in SPEEDS"
-							:key="option.id"
-							:value="option.id"
+						Tempo
+					</label>
+					<div class="kern-form-input__select-wrapper">
+						<select
+							id="ride-speed"
+							v-model="speed"
+							class="kern-form-input__select"
 						>
-							{{ option.label }}
-						</option>
-					</select>
+							<option
+								v-for="option in SPEEDS"
+								:key="option.id"
+								:value="option.id"
+							>
+								{{ option.label }}
+							</option>
+						</select>
+					</div>
 				</div>
 			</div>
-		</div>
-		<div
-			v-if="status !== 'idle'"
-			class="kern-progress ride-controls__progress"
-		>
-			<div class="ride-controls__progress-row">
-				<label
-					class="ride-controls__progress-label"
-					for="ride-progress"
-				>
-					<span class="ride-controls__progress-prefix">Gefahren: </span>{{ travelled }}
-				</label>
-				<button
-					class="kern-btn kern-btn--tertiary kern-btn--small"
-					type="button"
-					@click="onStop"
-				>
-					<span class="kern-label">Beenden</span>
-				</button>
-			</div>
-			<progress
-				id="ride-progress"
-				:value="progress"
-				max="1"
+			<div
+				v-if="status !== 'idle'"
+				class="kern-progress ride-controls__progress"
 			>
-				{{ travelled }}
-			</progress>
+				<div class="ride-controls__progress-row">
+					<label
+						class="ride-controls__progress-label"
+						for="ride-progress"
+					>
+						<span class="ride-controls__progress-prefix">Gefahren: </span>{{ travelled }}
+					</label>
+					<button
+						class="kern-btn kern-btn--tertiary kern-btn--small"
+						type="button"
+						@click="onStop"
+					>
+						<span class="kern-label">Beenden</span>
+					</button>
+				</div>
+				<progress
+					id="ride-progress"
+					:value="progress"
+					max="1"
+				>
+					{{ travelled }}
+				</progress>
+			</div>
+			<p
+				class="ride-controls__message"
+				role="status"
+			>
+				{{ message }}
+			</p>
 		</div>
-		<p
-			class="ride-controls__message"
-			role="status"
-		>
-			{{ message }}
-		</p>
 	</div>
 </template>
 
 <style scoped>
+/*
+ * Sticky at the bottom of the side panel, across its full width over its padding. The sticky element is also
+ * the container for the queries below: its width, and whether it is stuck.
+ */
 .ride-controls {
 	position: sticky;
 	bottom: calc(-1 * var(--kern-metric-space-default));
 	z-index: 1;
-	container: ride-controls / inline-size;
+	container: ride-controls / inline-size scroll-state;
+
+	/* Above, it takes back its own padding, so the button keeps the spacing of the route block. */
+	margin: calc(-1 * var(--kern-metric-space-small)) calc(-1 * var(--kern-metric-space-default)) 0;
+}
+
+/*
+ * In its place, the bar belongs to the route above it and has no line of its own. A line shows only while the
+ * bar is stuck at the bottom, floating over the content that scrolls below it. Browsers that cannot tell
+ * (scroll-state queries) always show the line.
+ */
+.ride-controls__bar {
 	display: grid;
 	gap: var(--kern-metric-space-small);
-
-	/* Across the full width of the panel, over its padding. */
-	margin: 0 calc(-1 * var(--kern-metric-space-default));
 	padding: var(--kern-metric-space-small) var(--kern-metric-space-default);
 	background: var(--kern-color-layout-background-default);
 	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
 }
 
-/*
- * Main button and speed in one row; the button takes the space left over. In a narrow panel (a phone in
- * landscape) the speed moves below and the button spans the whole row, so the bar still looks deliberate.
- */
+@supports (container-type: scroll-state) {
+	.ride-controls__bar {
+		border-top-color: transparent;
+	}
+
+	@container ride-controls scroll-state(stuck: bottom) {
+		.ride-controls__bar {
+			border-top-color: var(--kern-color-layout-border);
+		}
+	}
+}
+
+/* The button at its own width, aligned with the fields above; the speed at the right edge. */
 .ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
@@ -165,7 +188,7 @@ async function onStop (): Promise<void> {
 }
 
 .ride-controls__main {
-	flex: 1 0 auto;
+	flex: none;
 	margin: 0;
 }
 
@@ -173,6 +196,7 @@ async function onStop (): Promise<void> {
 	display: flex;
 	gap: var(--kern-metric-space-small);
 	align-items: center;
+	margin-left: auto;
 }
 
 /* A secondary setting: regular weight, so it does not compete with the labels of the form. */
@@ -208,8 +232,15 @@ async function onStop (): Promise<void> {
 	font-size: var(--kern-font-size-14);
 }
 
-/* In a narrow bar (a phone in landscape), "Beenden" stays beside the distance; screen readers still hear "Gefahren". */
+/*
+ * A narrow bar (a phone in landscape): the button spans the row and the speed sits below it; "Beenden"
+ * stays beside the distance, and screen readers still hear "Gefahren".
+ */
 @container ride-controls (width < 22rem) {
+	.ride-controls__main {
+		flex: 1 0 100%;
+	}
+
 	.ride-controls__progress-prefix {
 		position: absolute;
 		width: 1px;

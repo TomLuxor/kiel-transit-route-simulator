@@ -91,9 +91,17 @@ function onFocus (event: FocusEvent, lineId: LineId): void {
 </template>
 
 <style scoped>
-/* The accordion spans the panel; its header and body keep KERN's small inset. */
+/*
+ * A feature of its own, so its lines run across the full width of the panel, over its padding; inside, the
+ * header and the body line up with the route block above.
+ */
 .line-legend {
-	margin: 0 calc(-1 * var(--kern-metric-space-x-small));
+	margin: 0 calc(-1 * var(--kern-metric-space-default));
+}
+
+.line-legend > .kern-accordion__header,
+.line-legend > .kern-accordion__body {
+	padding-inline: var(--kern-metric-space-default);
 }
 
 .line-legend__hint,
