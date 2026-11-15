@@ -104,6 +104,45 @@ function onFocus (event: FocusEvent, lineId: LineId): void {
 	padding-inline: var(--kern-metric-space-default);
 }
 
+/*
+ * Opening and closing slide: the content grows from no height to its own, and the arrow turns. KERN swaps
+ * the arrow for another one when open, so here it keeps the downward one and turns it. Browsers that cannot
+ * animate to a height of "auto" open and close at once, as with reduced motion.
+ */
+.line-legend {
+	/* KERN's downward arrow (kern.css, .kern-accordion__header:after). */
+	--line-legend-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E");
+
+	interpolate-size: allow-keywords;
+}
+
+.line-legend::details-content {
+	height: 0;
+	overflow: clip;
+	transition: height 250ms ease-in-out, content-visibility 250ms allow-discrete;
+}
+
+.line-legend[open]::details-content {
+	height: auto;
+}
+
+.line-legend > .kern-accordion__header::after {
+	transition: rotate 250ms ease-in-out;
+}
+
+.line-legend[open] > .kern-accordion__header::after {
+	rotate: 180deg;
+	-webkit-mask-image: var(--line-legend-arrow);
+	mask-image: var(--line-legend-arrow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.line-legend::details-content,
+	.line-legend > .kern-accordion__header::after {
+		transition: none;
+	}
+}
+
 .line-legend__hint,
 .line-legend__source {
 	margin: 0;
