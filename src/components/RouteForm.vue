@@ -13,7 +13,7 @@ const props = defineProps<{
 	destination: RoutePoint | undefined
 	/** Result of the last map click or refused choice, for the live region. */
 	message: string
-	/** The message is shown, not only read out: a refused choice or a click beside the lines. */
+	/** The message is shown, not only read out: a refused choice. */
 	messageShown: boolean
 }>()
 
@@ -60,9 +60,6 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 		>
 			Start und Ziel
 		</h2>
-		<p class="route-form__intro">
-			Start und Ziel in der Karte auf eine Linie setzen, dann die Fahrt starten.
-		</p>
 		<div
 			v-for="field in fields"
 			:key="field.endpoint"
@@ -197,12 +194,8 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
  * Type scale of the side panel: the section title "Linien" 18 px semi-bold; field labels and list entries
  * 16 px semi-bold; text and the labels of secondary settings 16 px regular; details and messages 14 px.
  */
-.route-form__intro,
 .route-form__message {
 	margin: 0;
-}
-
-.route-form__message {
 	font-size: var(--kern-font-size-14);
 }
 
