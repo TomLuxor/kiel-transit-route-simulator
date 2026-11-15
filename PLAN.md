@@ -93,6 +93,7 @@ Done after step 2, because the map is the tool for checking the data:
 - [x] WFS: `src/network/sections.ts` fetches `lhkiel:Trassenabschnitte` as GeoJSON and checks every feature with type guards on `unknown` into a typed `Section`. `useSections` keeps the sections in a `shallowRef`, so OpenLayers geometries are not wrapped in deep reactive proxies.
 - [x] Attributions for both sources, always expanded (both licenses are CC BY 4.0 and require them).
 - [x] Loading and error states: a status line (`role="status"`) and a "Try again" button.
+- [x] More error handling, added at the end: the WFS request gives up after 15 s ("Der Kartenserver der Landeshauptstadt Kiel antwortet nicht.") instead of loading until the browser gives up, after minutes; its answer is about 100 kB. An answer that is not JSON gets a German message too. When the background map fails (three tiles in a row, none loaded in between), a notice below the map hint says so, with a button that loads the tiles again; lines and routes work without it. Checked in Chrome with the tiles blocked and the WFS request held.
 
 ## Step 3: Lines in colors, with a legend
 

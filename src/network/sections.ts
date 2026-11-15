@@ -9,6 +9,11 @@ import type { NetworkPart } from './graph'
 const SECTIONS_WFS_URL = 'https://ims.kiel.de/geodatenextern/services/Stadtplan/LHKielWmsWfs/MapServer/WFSServer'
 const SECTIONS_TYPE_NAME = 'lhkiel:Trassenabschnitte'
 
+/** Longest wait for the WFS, in milliseconds. Its answer is about 100 kB: a few seconds even on a slow phone network. */
+const WFS_TIMEOUT_MS = 15_000
+
+const NOT_GEOJSON = 'Der WFS hat nicht mit GeoJSON geantwortet.'
+
 /** One feature of the WFS layer: a route section, or one of several features that make up a section. */
 export interface Section {
 	/** Feature ID in the WFS (`ogr_fid`), unique per feature. */
@@ -59,24 +64,36 @@ export async function fetchSections (featureProjection: ProjectionLike, signal?:
 		srsName: 'EPSG:4326',
 	}).toString()
 
-	// The browser's own message for network errors ("Failed to fetch") means nothing to users.
-	const response = await fetch(url, { signal }).catch((error: unknown) => {
+	// A server that hangs would keep the page loading until the browser gives up, after minutes.
+	const timeout = AbortSignal.timeout(WFS_TIMEOUT_MS)
+	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
+
+	// The browser's own messages ("Failed to fetch", "The operation timed out") mean nothing to users. A request
+	// cancelled by the caller is passed on as it is, so the caller can ignore it.
+	function failure (error: unknown, otherwise: string): unknown {
 		if (signal?.aborted) {
-			throw error
+			return error
 		}
-		throw new Error('Der Kartenserver der Landeshauptstadt Kiel ist nicht erreichbar.')
+		return new Error(timeout.aborted ? 'Der Kartenserver der Landeshauptstadt Kiel antwortet nicht.' : otherwise)
+	}
+
+	const response = await fetch(url, { signal: combined }).catch((error: unknown) => {
+		throw failure(error, 'Der Kartenserver der Landeshauptstadt Kiel ist nicht erreichbar.')
 	})
 	if (!response.ok) {
 		throw new Error(`Der Kartenserver der Landeshauptstadt Kiel hat mit einem Fehler geantwortet (Status ${String(response.status)}).`)
 	}
-	const data: unknown = await response.json()
+	// Reading the answer can time out as well, or fail on something that is not JSON.
+	const data: unknown = await response.json().catch((error: unknown) => {
+		throw failure(error, NOT_GEOJSON)
+	})
 	return readSections(data, featureProjection)
 }
 
 /** Checks a GeoJSON answer of the WFS (in EPSG:4326) and turns it into sections in `featureProjection`. */
 export function readSections (data: unknown, featureProjection: ProjectionLike): Section[] {
 	if (!isRecord(data)) {
-		throw new Error('Der WFS hat nicht mit GeoJSON geantwortet.')
+		throw new Error(NOT_GEOJSON)
 	}
 	const features = new GeoJSON().readFeatures(data, { dataProjection: 'EPSG:4326', featureProjection })
 	if (features.length === 0) {

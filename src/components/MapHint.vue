@@ -27,16 +27,13 @@ defineProps<{
 </template>
 
 <style scoped>
-/* At the top of the map, centered between the zoom buttons (left) and the rotate button (right), 44 px each. */
+/* In the overlay at the top of the map (MapView.vue), which places and centers it. */
 .map-hint {
-	position: absolute;
-	top: var(--kern-metric-space-small);
-	inset-inline: calc(2 * var(--kern-metric-space-small) + 44px);
 	display: flex;
 	gap: var(--kern-metric-space-small);
 	align-items: center;
-	width: fit-content;
-	margin: 0 auto;
+	max-width: 100%;
+	margin: 0;
 	padding: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
 	color: var(--kern-color-layout-text-default);
 	font-size: var(--kern-typography-font-size-small-static);

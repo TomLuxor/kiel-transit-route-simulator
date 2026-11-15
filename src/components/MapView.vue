@@ -10,7 +10,7 @@ import PointerInteraction from 'ol/interaction/Pointer'
 import OlMap from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
 import View from 'ol/View'
-import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 
 import type { RideView } from '@/composables/useRide'
 import type { Endpoint } from '@/composables/useRouteSelection'
@@ -72,6 +72,7 @@ const GRAB_TOLERANCE_PIXELS = { mouse: 4, touch: 12 }
 
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
+const backgroundLayer = createBackgroundLayer()
 const lineLayer = createLineLayer()
 const routeLayer = createRouteLayer()
 const placeLayer = createPlaceLayer()
@@ -86,7 +87,36 @@ let map: OlMap | undefined
 function fitPadding (pixels: number): [number, number, number, number] {
 	const attribution = mapElement.value?.querySelector<HTMLElement>('.ol-attribution')
 	const hint = props.hint && mapElement.value?.parentElement?.querySelector<HTMLElement>('.map-hint')
-	return [pixels + (hint ? hint.offsetTop + hint.offsetHeight : 0), pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
+	// The hint stands in the overlay at the top of the map; offsets, unlike its bounding box, ignore its slide-in.
+	const overlay = hint?.offsetParent
+	const hintBottom = hint ? (overlay instanceof HTMLElement ? overlay.offsetTop : 0) + hint.offsetTop + hint.offsetHeight : 0
+	return [pixels + hintBottom, pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
+}
+
+/**
+ * Tiles of the background map that failed in a row, with none loaded in between. From three on, the background map
+ * counts as unreachable; a single failed tile among loaded ones is no reason to tell the user.
+ */
+let failedTiles = 0
+const FAILED_TILES_NOTICE = 3
+const basemapFailed = ref(false)
+backgroundLayer.getSource()?.on('tileloaderror', () => {
+	failedTiles += 1
+	basemapFailed.value = failedTiles >= FAILED_TILES_NOTICE
+})
+backgroundLayer.getSource()?.on('tileloadend', () => {
+	failedTiles = 0
+	basemapFailed.value = false
+})
+
+/** Shown once the network is there: before, the status bar of the page tells about loading and its errors. */
+const basemapNotice = computed(() => basemapFailed.value && props.lines.length > 0)
+
+/** Loads the tiles of the background map again, the failed ones too. */
+function retryBasemap (): void {
+	failedTiles = 0
+	basemapFailed.value = false
+	backgroundLayer.getSource()?.refresh()
 }
 
 /**
@@ -361,7 +391,7 @@ onMounted(() => {
 		// tabindex; in an app that is all map, it should react at once. Marker dragging comes last, so it sees a
 		// press before panning does.
 		interactions: defaultInteractions().extend([markerDrag]),
-		layers: [createBackgroundLayer(), lineLayer.layer, routeLayer.layer, placeLayer.layer, selectionLayer.layer],
+		layers: [backgroundLayer, lineLayer.layer, routeLayer.layer, placeLayer.layer, selectionLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
 			center: fromLonLat(KIEL_CENTER, MAP_PROJECTION),
@@ -415,7 +445,40 @@ onBeforeUnmount(() => {
 			Das Formular „Start und Ziel“ bietet dieselbe Auswahl per Tastatur.
 			Wenn die Karte den Fokus hat, verschieben die Pfeiltasten die Karte, Plus und Minus zoomen.
 		</p>
-		<MapHint :endpoint="hint" />
+		<!-- At the top of the map: how to use it, and below that a notice when the background map cannot be loaded. -->
+		<div class="map-overlay">
+			<MapHint :endpoint="hint" />
+			<!-- Always in the page, so that screen readers hear the message when it appears. -->
+			<div
+				class="map-notice"
+				:class="{ 'app-visually-hidden': !basemapNotice }"
+			>
+				<span
+					v-if="basemapNotice"
+					class="kern-icon kern-icon--warning map-notice__icon"
+					aria-hidden="true"
+				/>
+				<p
+					class="map-notice__message"
+					role="status"
+				>
+					{{ basemapNotice ? 'Die Hintergrundkarte ist nicht erreichbar.' : '' }}
+				</p>
+				<!-- Only the icon on narrow phones (KERN's kern-sr-only-mobile), where the notice would cover the map. -->
+				<button
+					v-if="basemapNotice"
+					class="kern-btn kern-btn--secondary kern-btn--small map-notice__retry"
+					type="button"
+					@click="retryBasemap"
+				>
+					<span
+						class="kern-icon kern-icon--autorenew"
+						aria-hidden="true"
+					/>
+					<span class="kern-label kern-sr-only-mobile">Erneut versuchen</span>
+				</button>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -437,6 +500,54 @@ onBeforeUnmount(() => {
 .map {
 	width: 100%;
 	height: 100%;
+}
+
+/* At the top of the map, centered between the zoom buttons (left) and the rotate button (right), 44 px each. */
+.map-overlay {
+	position: absolute;
+	top: var(--kern-metric-space-small);
+	inset-inline: calc(2 * var(--kern-metric-space-small) + 44px);
+	display: flex;
+	flex-direction: column;
+	gap: var(--kern-metric-space-small);
+	align-items: center;
+	pointer-events: none;
+}
+
+/*
+ * Like the status bar of the page, with the warning color of KERN: the map works, only its background is missing.
+ * One row and the size of messages (14 px), so that it covers little of the map.
+ */
+.map-notice {
+	display: flex;
+	gap: var(--kern-metric-space-small);
+	align-items: center;
+	max-width: 100%;
+	padding: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
+	color: var(--kern-color-layout-text-default);
+	background: var(--kern-color-feedback-warning-background);
+	border: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	border-left: var(--kern-metric-border-width-bold) solid var(--kern-color-feedback-warning);
+	border-radius: var(--kern-metric-border-radius-default);
+	box-shadow: var(--kern-shadow-elevation-low);
+	pointer-events: auto;
+}
+
+.map-notice__message {
+	flex: 1 1 auto;
+	margin: 0;
+	font-size: var(--kern-font-size-14);
+}
+
+.map-notice__retry {
+	flex: none;
+	margin: 0;
+}
+
+/* KERN colors its icons with a token it defines only inside its layer containers. */
+.map-notice__icon {
+	margin: 0;
+	background-color: var(--kern-color-layout-text-default);
 }
 
 /* Over a line, the pointer shows that a click chooses a point there; over start or destination, that they can be dragged. */

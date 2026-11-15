@@ -15,6 +15,7 @@ The page itself is in German and is called *Stadtbahn-Simulator Kiel*.
 - **The line list:** pointing at a line or focusing it washes out the other lines on the map; choosing it sets start and destination at its two ends, so it can be ridden from end to end.
 - **The route:** the one with the fewest changes, drawn on the map in the colors of its lines and described leg by leg in the side panel.
 - **The ride:** the map zooms to the start and follows a vehicle along the route. It stops at every change, and the part already travelled turns grey. The ride can be paused, stopped and run at three speeds; dragging the map pauses it, so you can look around. Departure, changes and arrival are announced to screen readers. With reduced motion, it shows one leg at a time without animation.
+- **When a service fails:** a message on the map says so and offers to try again. The Stadtbahn data counts as failed after 15 seconds without an answer; without the background map, lines and routes keep working.
 - **Everywhere:** laptops and phones in portrait and landscape, a light and a dark theme that follow the system setting, the whole interface in German.
 
 ## How the route is found
