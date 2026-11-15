@@ -139,6 +139,8 @@ function dimLines (route: Route | undefined): void {
 function drawSelection (start: RoutePoint | undefined, destination: RoutePoint | undefined, route: Route | undefined): void {
 	const changes = (route?.legs ?? []).slice(1).map(leg => leg.coordinates[0]).filter(coordinate => coordinate !== undefined)
 	selectionLayer.showSelection(start, destination, changes)
+	// A station with a pin on it changes a little, also while a pin is dragged over it and snaps.
+	placeLayer.markChosen([start, destination].filter((point): point is RoutePoint => point?.kind === 'place').map(point => point.id))
 	routeLayer.showRoute(route)
 	dimLines(route)
 }
@@ -186,8 +188,11 @@ watch(() => [props.start, props.destination, props.route] as const, (_, [previou
 	showSelection(previousStart)
 })
 
-/** The start or destination being dragged, and where it is now; undefined while nothing is dragged. */
-let drag: { endpoint: Endpoint, point: RoutePoint | undefined } | undefined
+/**
+ * The start or destination being dragged, where it is now, and how far its tip is from the pointer, in pixels:
+ * a pin is grabbed by its head, and the tip keeps its distance instead of jumping to the pointer.
+ */
+let drag: { endpoint: Endpoint, point: RoutePoint | undefined, grip: readonly [number, number] } | undefined
 /** The last press was on the start or destination, so the click it makes chooses nothing. */
 let grabbed = false
 
@@ -198,12 +203,14 @@ function endpointAt (event: MapBrowserEvent): Endpoint | undefined {
 }
 
 /** While dragging: the marker slides along the lines, and the route follows; the form only learns of it on drop. */
-function previewDrag (coordinate: Coordinate): void {
+function previewDrag (pixel: readonly number[]): void {
 	const resolution = map?.getView().getResolution()
-	if (!drag || !props.network || resolution === undefined) {
+	const [x = 0, y = 0] = pixel
+	const tip = drag && map?.getCoordinateFromPixel([x + drag.grip[0], y + drag.grip[1]])
+	if (!drag || !tip || !props.network || resolution === undefined) {
 		return
 	}
-	const point = dragPoint(props.lines, props.places, coordinate, resolution)
+	const point = dragPoint(props.lines, props.places, tip, resolution)
 	const other = drag.endpoint === 'start' ? props.destination : props.start
 	// Where the other endpoint is, the marker stops, as a choice there would be refused.
 	if (!point || point.id === drag.point?.id || (other && isSamePoint(point, other))) {
@@ -239,14 +246,17 @@ const markerDrag = new PointerInteraction({
 		if (!endpoint) {
 			return false
 		}
-		drag = { endpoint, point: endpoint === 'start' ? props.start : props.destination }
+		const point = endpoint === 'start' ? props.start : props.destination
+		const [tipX = 0, tipY = 0] = (point && map?.getPixelFromCoordinate(point.coordinate)) ?? event.pixel
+		const [x = 0, y = 0] = event.pixel
+		drag = { endpoint, point, grip: [tipX - x, tipY - y] }
 		// After a ride, the vehicle would stay at the old destination.
 		selectionLayer.showVehicle(undefined)
 		mapElement.value?.classList.add('map--dragging')
 		return true
 	},
 	handleDragEvent: event => {
-		previewDrag(event.coordinate)
+		previewDrag(event.pixel)
 	},
 	handleUpEvent: () => {
 		endDrag()
