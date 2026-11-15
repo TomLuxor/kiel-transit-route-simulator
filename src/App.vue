@@ -34,7 +34,7 @@ const routeDescription = computed(() => route.value && start.value && destinatio
 	? describeRoute(route.value, start.value, destination.value, lines.value, places.value)
 	: undefined)
 
-/** The line pointed at in the legend: the others are washed out on the map. */
+/** The line pointed at in the legend: the others are washed out on the map, unless it is the chosen line already. */
 const highlightedLine = shallowRef<LineId>()
 
 /** The line whose two ends are start and destination, marked in the legend. */
@@ -183,7 +183,7 @@ function retry (): void {
 				:route="route"
 				:ride="rideView"
 				:picking="rideStatus === 'idle' || rideStatus === 'arrived'"
-				:highlighted-line="highlightedLine"
+				:highlighted-line="highlightedLine === selectedLineId ? undefined : highlightedLine"
 				@pick="chooseOnMap"
 				@move="move"
 				@pan="onMapPan"

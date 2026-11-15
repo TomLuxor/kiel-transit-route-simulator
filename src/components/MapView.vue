@@ -143,11 +143,26 @@ function drawSelection (start: RoutePoint | undefined, destination: RoutePoint |
 	dimLines(route)
 }
 
-watch(() => props.highlightedLine, lineId => {
+/** How much of the chosen route and its markers shows while another line is previewed. */
+const RECEDED_OPACITY = 0.4
+
+/**
+ * A line pointed at in the legend is a preview of choosing it: it comes forward, the other lines are washed
+ * out, and a chosen route steps back with its markers, still recognizable. During a ride the route and the
+ * vehicle stay as they are. Leaving the line restores everything; the preview never changes the choice.
+ */
+function showHighlight (): void {
+	const lineId = props.highlightedLine
 	lineLayer.highlight(lineId)
 	placeLayer.highlight(lineId)
 	dimLines(props.route)
-})
+	const receded = lineId !== undefined && props.route !== undefined && props.ride === undefined
+	routeLayer.layer.setOpacity(receded ? RECEDED_OPACITY : 1)
+	selectionLayer.layer.setOpacity(receded ? RECEDED_OPACITY : 1)
+}
+
+// Only whether a ride exists, not each of its frames.
+watch(() => [props.highlightedLine, props.route, props.ride === undefined] as const, showHighlight)
 
 /** A point just dropped after dragging it, until the selection shows it: the view then stays where the user put it. */
 let dropped: RoutePoint | undefined

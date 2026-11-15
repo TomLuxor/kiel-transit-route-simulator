@@ -17,6 +17,12 @@ const emit = defineEmits<{
 	choose: [lineId: LineId]
 }>()
 
+/**
+ * Open at first on laptops; closed on phones (the same screens as the ride mode in App.vue), where the panel
+ * has little room and the lines can be seen on the map. Only the start: after that, the user decides.
+ */
+const openAtStart = !window.matchMedia('(max-width: 47.99rem), (max-height: 37.5rem)').matches
+
 /** With a finger there is no hover: a tap chooses the line, and nothing would end the highlight. */
 function onPointerEnter (event: PointerEvent, lineId: LineId): void {
 	if (event.pointerType !== 'touch') {
@@ -33,10 +39,10 @@ function onFocus (event: FocusEvent, lineId: LineId): void {
 </script>
 
 <template>
-	<!-- KERN's accordion: a native disclosure, open at first, that works by mouse, touch and keyboard without script. -->
+	<!-- KERN's accordion: a native disclosure that works by mouse, touch and keyboard without script. -->
 	<details
 		class="kern-accordion line-legend"
-		open
+		:open="openAtStart"
 	>
 		<summary class="kern-accordion__header">
 			<h2 class="kern-title kern-title--small">
