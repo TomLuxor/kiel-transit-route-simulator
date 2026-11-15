@@ -196,11 +196,14 @@ async function onStop (): Promise<void> {
 	}
 }
 
-/* The button at its own width, aligned with the fields above; the speed right beside it, as one group. */
+/*
+ * The button at its own width, aligned with the fields above; the speed beside it, as one group but with room
+ * to tell the two apart. When the row wraps (a narrow bar), the speed sits close below the button.
+ */
 .ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--kern-metric-space-small);
+	gap: var(--kern-metric-space-small) var(--kern-metric-space-large);
 	align-items: center;
 }
 
