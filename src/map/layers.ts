@@ -14,6 +14,9 @@ export function createBackgroundLayer (): TileLayer<TileWMS> {
 			attributions: BACKGROUND_WMS.attribution,
 			attributionsCollapsible: false,
 			transition: 0,
+			// Loaded as CORS requests without credentials, so the browser neither sends nor stores the cookie of
+			// the server's load balancer (a third-party cookie, flagged by Lighthouse). The server allows CORS.
+			crossOrigin: 'anonymous',
 		}),
 	})
 }
