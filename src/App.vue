@@ -42,6 +42,9 @@ const selectedLineId = computed(() => start.value && destination.value
 	? lineBetween(lines.value, start.value.coordinate, destination.value.coordinate)
 	: undefined)
 
+/** Until start and destination are both set, the map tells which one a click sets; not before the lines are there. */
+const mapHint = computed(() => network.value && (!start.value || !destination.value) ? clickTarget.value : undefined)
+
 /** A line clicked in the legend: start and destination at its two ends, in the direction of its route. */
 function chooseLine (lineId: LineId): void {
 	const line = lines.value.find(candidate => candidate.definition.id === lineId)
@@ -184,6 +187,7 @@ function retry (): void {
 				:ride="rideView"
 				:picking="rideStatus === 'idle' || rideStatus === 'arrived'"
 				:highlighted-line="highlightedLine === selectedLineId ? undefined : highlightedLine"
+				:hint="mapHint"
 				@pick="chooseOnMap"
 				@move="move"
 				@pan="onMapPan"

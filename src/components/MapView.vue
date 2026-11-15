@@ -31,6 +31,8 @@ import { createSelectionLayer } from '@/map/selectionLayer'
 import { dragPoint, isSamePoint, pickPoint, type RoutePoint } from '@/network/routePoints'
 import { findRoute, type Route } from '@/routing/route'
 
+import MapHint from './MapHint.vue'
+
 const props = defineProps<{
 	network: Network | undefined
 	lines: readonly ResolvedLine[]
@@ -43,6 +45,8 @@ const props = defineProps<{
 	picking: boolean
 	/** A line pointed at in the legend: the others are washed out. */
 	highlightedLine: LineId | undefined
+	/** The endpoint to tell the user to set with a click, as long as start or destination is missing. */
+	hint: Endpoint | undefined
 }>()
 
 const emit = defineEmits<{
@@ -74,10 +78,14 @@ const placeLayer = createPlaceLayer()
 const selectionLayer = createSelectionLayer()
 let map: OlMap | undefined
 
-/** Padding for fitting the view, in pixels; the attributions cover the bottom of the map, more so on phones. */
+/**
+ * Padding for fitting the view, in pixels: the attributions cover the bottom of the map, more so on phones,
+ * and the hint, while there is one, the top (MapHint.vue, next to the map element).
+ */
 function fitPadding (pixels: number): number[] {
 	const attribution = mapElement.value?.querySelector<HTMLElement>('.ol-attribution')
-	return [pixels, pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
+	const hint = props.hint && mapElement.value?.parentElement?.querySelector<HTMLElement>('.map-hint')
+	return [pixels + (hint ? hint.offsetTop + hint.offsetHeight : 0), pixels, pixels + (attribution?.offsetHeight ?? 0), pixels]
 }
 
 /** The whole network in view; animated when the user asks for it with the button. */
@@ -117,7 +125,8 @@ function reveal (point: RoutePoint | undefined): void {
 	}
 }
 
-watch(() => [props.network, props.lines, props.places], showNetwork)
+// After rendering, so that the hint that comes with the network is there to make room for.
+watch(() => [props.network, props.lines, props.places], showNetwork, { flush: 'post' })
 
 /** Zooms to the whole route, or as far as needed to show it. */
 function fitRoute (): void {
@@ -379,6 +388,7 @@ onBeforeUnmount(() => {
 			Das Formular „Start und Ziel“ bietet dieselbe Auswahl per Tastatur.
 			Wenn die Karte den Fokus hat, verschieben die Pfeiltasten die Karte, Plus und Minus zoomen.
 		</p>
+		<MapHint :endpoint="hint" />
 	</div>
 </template>
 

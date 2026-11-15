@@ -4,8 +4,9 @@ import { computed, nextTick } from 'vue'
 import type { ResolvedPlace } from '@/network/places'
 
 import { type Endpoint, ENDPOINT_WORDS } from '@/composables/useRouteSelection'
-import { PIN } from '@/map/pin'
 import { describeLines, placePoint, type RoutePoint } from '@/network/routePoints'
+
+import PinIcon from './PinIcon.vue'
 
 const props = defineProps<{
 	places: readonly ResolvedPlace[]
@@ -70,30 +71,8 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 					class="kern-label route-form__label"
 					:for="`route-${field.endpoint}`"
 				>
-					<!-- The pin as on the map, so that the label doubles as its legend; cut to the pin and its outline. -->
-					<svg
-						class="route-form__marker"
-						viewBox="2 2 32 46"
-						width="16"
-						height="23"
-						aria-hidden="true"
-						focusable="false"
-					>
-						<path
-							class="route-form__marker-outline"
-							:d="PIN.path"
-						/>
-						<path
-							:class="`route-form__marker-${field.endpoint}`"
-							:d="PIN.path"
-						/>
-						<circle
-							:class="`route-form__marker-${field.endpoint}-dot`"
-							:cx="PIN.dot.x"
-							:cy="PIN.dot.y"
-							:r="PIN.dot.radius"
-						/>
-					</svg>
+					<!-- The pin as on the map, so that the label doubles as its legend. -->
+					<PinIcon :endpoint="field.endpoint" />
 					{{ field.title }}
 				</label>
 				<button
@@ -212,39 +191,6 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 	gap: var(--kern-metric-space-x-small);
 	align-items: center;
 	font-size: var(--kern-typography-font-size-small-static);
-}
-
-.route-form__marker {
-	flex: none;
-	width: auto;
-	height: 1.5rem;
-}
-
-/* The same colors as the pins on the map (src/map/selectionLayer.ts). */
-.route-form__marker-outline {
-	fill: var(--kern-color-white);
-	stroke: var(--kern-color-white);
-	stroke-width: 5;
-	stroke-linejoin: round;
-}
-
-.route-form__marker-start {
-	fill: var(--app-color-on-signal);
-}
-
-.route-form__marker-start-dot {
-	fill: var(--kern-color-white);
-}
-
-.route-form__marker-destination {
-	fill: var(--app-color-signal);
-	stroke: var(--app-color-on-signal);
-	stroke-width: 2.5;
-	stroke-linejoin: round;
-}
-
-.route-form__marker-destination-dot {
-	fill: var(--app-color-on-signal);
 }
 
 /*
