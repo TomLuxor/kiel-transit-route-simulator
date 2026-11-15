@@ -126,6 +126,29 @@ export function pickPoint (lines: readonly ResolvedLine[], places: readonly Reso
 	return pointNear(position, places, coordinate, resolution)
 }
 
+/** Start and destination at the two ends of a line, in the direction of its route: the whole line as a ride. */
+export function lineEndPoints (line: ResolvedLine, lines: readonly ResolvedLine[], places: readonly ResolvedPlace[]):
+	{ start: RoutePoint, destination: RoutePoint } | undefined {
+	const first = line.coordinates[0]
+	const last = line.coordinates[line.coordinates.length - 1]
+	const start = first && routePointAt(lines, places, first)
+	const destination = last && routePointAt(lines, places, last)
+	return start && destination ? { start, destination } : undefined
+}
+
+/** A start or destination this close to a line end counts as being at the end; places there lie within 0.2 m. */
+const LINE_END_METERS = 5
+
+/** The line that runs from one of the two points to the other, end to end, if there is one. */
+export function lineBetween (lines: readonly ResolvedLine[], a: Coordinate, b: Coordinate): LineId | undefined {
+	const near = (end: Coordinate | undefined, point: Coordinate): boolean => end !== undefined && distanceMeters(end, point) < LINE_END_METERS
+	return lines.find(line => {
+		const first = line.coordinates[0]
+		const last = line.coordinates[line.coordinates.length - 1]
+		return (near(first, a) && near(last, b)) || (near(first, b) && near(last, a))
+	})?.definition.id
+}
+
 /**
  * Where a start or destination dragged to `coordinate` goes: onto the nearest line, however far the pointer
  * strays from it, so the marker slides along the line; onto a place when it passes over the place's dot.

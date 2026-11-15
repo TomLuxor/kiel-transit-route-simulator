@@ -14,6 +14,7 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
 import type { RideView } from '@/composables/useRide'
 import type { Endpoint } from '@/composables/useRouteSelection'
+import type { LineId } from '@/data/lines'
 import type { Network } from '@/network/graph'
 import type { ResolvedLine } from '@/network/lines'
 import type { ResolvedPlace } from '@/network/places'
@@ -40,6 +41,8 @@ const props = defineProps<{
 	ride: RideView | undefined
 	/** Whether a click on a line chooses a point; not during a ride. */
 	picking: boolean
+	/** A line pointed at in the legend: the others are washed out. */
+	highlightedLine: LineId | undefined
 }>()
 
 const emit = defineEmits<{
@@ -124,13 +127,27 @@ function fitRoute (): void {
 	}
 }
 
+/**
+ * Under a route, the lines are dimmed; while one line is highlighted, it is shown in full and the others
+ * are washed out by the line layer itself instead.
+ */
+function dimLines (route: Route | undefined): void {
+	lineLayer.layer.setOpacity(route && !props.highlightedLine ? DIMMED_LINE_OPACITY : 1)
+}
+
 /** Markers for start, destination and changes, and the route over the dimmed lines. */
 function drawSelection (start: RoutePoint | undefined, destination: RoutePoint | undefined, route: Route | undefined): void {
 	const changes = (route?.legs ?? []).slice(1).map(leg => leg.coordinates[0]).filter(coordinate => coordinate !== undefined)
 	selectionLayer.showSelection(start, destination, changes)
 	routeLayer.showRoute(route)
-	lineLayer.layer.setOpacity(route ? DIMMED_LINE_OPACITY : 1)
+	dimLines(route)
 }
+
+watch(() => props.highlightedLine, lineId => {
+	lineLayer.highlight(lineId)
+	placeLayer.highlight(lineId)
+	dimLines(props.route)
+})
 
 /** A point just dropped after dragging it, until the selection shows it: the view then stays where the user put it. */
 let dropped: RoutePoint | undefined

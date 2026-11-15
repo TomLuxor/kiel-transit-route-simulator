@@ -79,21 +79,21 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 						aria-hidden="true"
 						focusable="false"
 					>
+						<circle
+							class="route-form__marker-halo"
+							cx="14"
+							cy="14"
+							r="13"
+						/>
 						<template v-if="field.endpoint === 'start'">
 							<circle
 								class="route-form__marker-start"
 								cx="14"
 								cy="14"
-								r="9"
+								r="9.5"
 							/>
 						</template>
 						<template v-else>
-							<circle
-								class="route-form__marker-halo"
-								cx="14"
-								cy="14"
-								r="13"
-							/>
 							<circle
 								class="route-form__marker-destination"
 								cx="14"
@@ -196,9 +196,17 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 	gap: var(--kern-metric-space-default);
 }
 
+/*
+ * Type scale of the side panel: the section title "Linien" 18 px semi-bold; field labels and list entries
+ * 16 px semi-bold; text and the labels of secondary settings 16 px regular; details and messages 14 px.
+ */
 .route-form__intro,
 .route-form__message {
 	margin: 0;
+}
+
+.route-form__message {
+	font-size: var(--kern-font-size-14);
 }
 
 .route-form__label-row {
@@ -213,6 +221,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 	display: inline-flex;
 	gap: var(--kern-metric-space-x-small);
 	align-items: center;
+	font-size: var(--kern-typography-font-size-small-static);
 }
 
 .route-form__marker {
@@ -224,8 +233,6 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 /* The same colors as the markers on the map (src/map/selectionLayer.ts). */
 .route-form__marker-start {
 	fill: var(--app-color-on-signal);
-	stroke: var(--kern-color-white);
-	stroke-width: 3;
 }
 
 .route-form__marker-halo {
@@ -238,9 +245,17 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 	stroke-width: 4;
 }
 
-/* Legend and choices in one row, to save height on phones. KERN floats the legend; the body goes beside it. */
+/*
+ * Legend and choices in one row, to save height on phones. KERN floats the legend; the body goes beside it.
+ * A secondary setting, so it reads as a sentence in regular weight: "Kartenklick wählt ( ) Start ( ) Ziel".
+ */
 .route-form__click-target legend.kern-label {
 	margin: 0 var(--kern-metric-space-default) 0 0;
+}
+
+.route-form__click-target .kern-label {
+	font-size: var(--kern-typography-font-size-small-static);
+	font-weight: var(--kern-typography-font-weight-regular);
 }
 
 .route-form__click-target .kern-fieldset__body {

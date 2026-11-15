@@ -16,15 +16,18 @@ import { MAP_COLORS } from './colors'
 
 /**
  * Start and destination as in the logo: the start a filled dark disc, the destination a signal-yellow disc
- * in a dark ring. They differ in shape, not only in color, and a white ring sets both off from the lines.
+ * in a dark ring. They differ in shape, not only in color. Both sit on the same white halo, which sets them
+ * off from the lines and covers the station dot or line badge below, so a marker on a place replaces its dot.
  * A change of line is a white disc in a dark ring, larger than the dots of the places.
  */
+const halo = new Style({ image: new Circle({ radius: 13, fill: new Fill({ color: MAP_COLORS.casing }) }) })
 const MARKER_STYLES: Readonly<Record<'start' | 'destination' | 'change', Style[]>> = {
-	start: [new Style({
-		image: new Circle({ radius: 9, fill: new Fill({ color: MAP_COLORS.onSignal }), stroke: new Stroke({ color: MAP_COLORS.casing, width: 3 }) }),
-	})],
+	start: [
+		halo,
+		new Style({ image: new Circle({ radius: 9.5, fill: new Fill({ color: MAP_COLORS.onSignal }) }) }),
+	],
 	destination: [
-		new Style({ image: new Circle({ radius: 13, fill: new Fill({ color: MAP_COLORS.casing }) }) }),
+		halo,
 		new Style({ image: new Circle({ radius: 9, fill: new Fill({ color: MAP_COLORS.signal }), stroke: new Stroke({ color: MAP_COLORS.onSignal, width: 4 }) }) }),
 	],
 	change: [new Style({

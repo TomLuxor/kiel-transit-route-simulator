@@ -1,3 +1,5 @@
+import { asArray } from 'ol/color'
+
 /**
  * Colors for the map canvas, which cannot read CSS variables: the KERN tokens named, converted to hex.
  * The canvas keeps these colors in dark mode; the white casing and halos keep them readable on the
@@ -15,3 +17,12 @@ export const MAP_COLORS = {
 	/** KERN neutral-450, the part of the route already travelled; 3.5:1 against the white casing. */
 	travelled: '#8187a7',
 } as const
+
+/** How much of its color a washed-out line keeps, over its white casing. */
+const FADED_ALPHA = 0.3
+
+/** A line color washed out, for the lines other than a highlighted one. */
+export function fadedColor (color: string): number[] {
+	const [red = 0, green = 0, blue = 0] = asArray(color)
+	return [red, green, blue, FADED_ALPHA]
+}

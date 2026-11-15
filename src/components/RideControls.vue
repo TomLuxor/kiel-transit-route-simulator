@@ -24,12 +24,15 @@ const emit = defineEmits<{
 
 const mainButton = useTemplateRef<HTMLButtonElement>('mainButton')
 
-/** One button that changes its label, so that keyboard focus stays on it for the whole ride. */
+/**
+ * One button that changes its label, so that keyboard focus stays on it for the whole ride. After the
+ * arrival it starts the ride again; the message says that the ride has arrived.
+ */
 const MAIN_LABELS: Readonly<Record<RideStatus, string>> = {
 	idle: 'Fahrt starten',
 	running: 'Anhalten',
 	paused: 'Weiter',
-	arrived: 'Noch einmal fahren',
+	arrived: 'Fahrt starten',
 }
 
 const SPEEDS = (['slow', 'normal', 'fast'] as const).map(id => ({ id, label: RIDE_SPEEDS[id].label }))
@@ -55,7 +58,11 @@ async function onStop (): Promise<void> {
 </script>
 
 <template>
-	<!-- A bar at the bottom of the side panel: it stays in view while the panel scrolls, on phones too. -->
+	<!--
+		A bar at the bottom of the side panel: it stays in view while the panel scrolls, on phones too.
+		The first row is the same in every state: the main button and the speed. "Beenden" belongs to the
+		ride under way, so it stands next to how far the ride has come.
+	-->
 	<div
 		class="ride-controls"
 		role="group"
@@ -64,23 +71,15 @@ async function onStop (): Promise<void> {
 		<div class="ride-controls__row">
 			<button
 				ref="mainButton"
-				class="kern-btn kern-btn--primary"
+				class="kern-btn kern-btn--primary ride-controls__main"
 				type="button"
 				@click="onMain"
 			>
 				<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
 			</button>
-			<button
-				v-if="status !== 'idle'"
-				class="kern-btn kern-btn--secondary"
-				type="button"
-				@click="onStop"
-			>
-				<span class="kern-label">Beenden</span>
-			</button>
 			<div class="ride-controls__speed">
 				<label
-					class="kern-label"
+					class="ride-controls__speed-label"
 					for="ride-speed"
 				>
 					Tempo
@@ -106,12 +105,21 @@ async function onStop (): Promise<void> {
 			v-if="status !== 'idle'"
 			class="kern-progress ride-controls__progress"
 		>
-			<label
-				class="kern-label kern-label--small"
-				for="ride-progress"
-			>
-				Gefahren: {{ travelled }}
-			</label>
+			<div class="ride-controls__progress-row">
+				<label
+					class="ride-controls__progress-label"
+					for="ride-progress"
+				>
+					<span class="ride-controls__progress-prefix">Gefahren: </span>{{ travelled }}
+				</label>
+				<button
+					class="kern-btn kern-btn--tertiary kern-btn--small"
+					type="button"
+					@click="onStop"
+				>
+					<span class="kern-label">Beenden</span>
+				</button>
+			</div>
 			<progress
 				id="ride-progress"
 				:value="progress"
@@ -134,6 +142,7 @@ async function onStop (): Promise<void> {
 	position: sticky;
 	bottom: calc(-1 * var(--kern-metric-space-default));
 	z-index: 1;
+	container: ride-controls / inline-size;
 	display: grid;
 	gap: var(--kern-metric-space-small);
 
@@ -144,6 +153,10 @@ async function onStop (): Promise<void> {
 	border-top: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
 }
 
+/*
+ * Main button and speed in one row; the button takes the space left over. In a narrow panel (a phone in
+ * landscape) the speed moves below and the button spans the whole row, so the bar still looks deliberate.
+ */
 .ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
@@ -151,40 +164,59 @@ async function onStop (): Promise<void> {
 	align-items: center;
 }
 
-.ride-controls__row .kern-btn {
+.ride-controls__main {
+	flex: 1 0 auto;
 	margin: 0;
 }
 
-/* Label and list in one row, at the end of the bar. */
 .ride-controls__speed {
 	display: flex;
 	gap: var(--kern-metric-space-small);
 	align-items: center;
-	margin-left: auto;
 }
 
-.ride-controls__speed .kern-label {
-	margin: 0;
+/* A secondary setting: regular weight, so it does not compete with the labels of the form. */
+.ride-controls__speed-label {
+	font-size: var(--kern-typography-font-size-small-static);
 }
 
+/* Wide enough for "Langsam" next to KERN's arrow. */
 .ride-controls__speed .kern-form-input__select-wrapper {
 	width: 8rem;
 }
 
-/* KERN's progress bar reads "-contextual" tokens, which exist only inside KERN's layer containers. */
 .ride-controls__progress {
-	--kern-color-feedback-default-contextual: var(--kern-color-feedback-default);
-	--kern-color-feedback-default-background-contextual: var(--kern-color-feedback-default-background);
-
 	gap: var(--kern-metric-space-x-small);
 }
 
-.ride-controls__progress .kern-label {
+.ride-controls__progress-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
+	justify-content: space-between;
+	align-items: center;
+	align-self: stretch;
+}
+
+.ride-controls__progress-row .kern-btn {
 	margin: 0;
 }
 
+.ride-controls__progress-label,
 .ride-controls__message {
 	margin: 0;
 	font-size: var(--kern-font-size-14);
+}
+
+/* In a narrow bar (a phone in landscape), "Beenden" stays beside the distance; screen readers still hear "Gefahren". */
+@container ride-controls (width < 22rem) {
+	.ride-controls__progress-prefix {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		white-space: nowrap;
+		clip-path: inset(50%);
+	}
 }
 </style>

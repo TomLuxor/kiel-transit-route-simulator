@@ -8,7 +8,7 @@ import { at, farFromPlaces, lines, network, placeById, places } from '@/network/
 import { distanceMeters } from '@/network/geometry'
 import { buildNetwork, itemAt } from '@/network/graph'
 import { resolveLine } from '@/network/lines'
-import { pickPoint, placePoint } from '@/network/routePoints'
+import { lineEndPoints, pickPoint, placePoint } from '@/network/routePoints'
 
 import { describeRoute } from '../describe'
 import { findRoute, type Route } from '../route'
@@ -31,6 +31,14 @@ describe('routes on the Kiel network', () => {
 
 	it('rides one line when start and destination are on it', () => {
 		expect(lineIdsOf(routeBetween('wik', 'belvedere'))).toEqual(['2'])
+	})
+
+	it('rides a whole line chosen in the legend without a change, end to end', () => {
+		for (const line of lines) {
+			const ends = lineEndPoints(line, lines, places)
+			const route = ends && findRoute(network, lines, ends.start.coordinate, ends.destination.coordinate)
+			expect(lineIdsOf(route)).toEqual([line.definition.id])
+		}
 	})
 
 	it('changes once, where the second line joins: Wik to Mettenhof', () => {

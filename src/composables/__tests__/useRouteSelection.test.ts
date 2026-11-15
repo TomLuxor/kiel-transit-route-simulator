@@ -57,6 +57,16 @@ describe('choosing start and destination', () => {
 		expect(selection.message.value).toBe('Dort liegt schon der Start. Bitte ein anderes Ziel wählen.')
 	})
 
+	it('sets start and destination at once, also where the old destination was the new start', () => {
+		const selection = useRouteSelection()
+		selection.choose('start', a)
+		selection.choose('destination', b)
+		selection.chooseBoth(b, c)
+		expect(selection.start.value).toBe(b)
+		expect(selection.destination.value).toBe(c)
+		expect(selection.message.value).toBe('Start: B. Ziel: C.')
+	})
+
 	it('swaps start and destination and then targets the empty one', () => {
 		const selection = useRouteSelection()
 		selection.choose('start', a)

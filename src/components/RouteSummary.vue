@@ -91,10 +91,12 @@ defineProps<{
 .route-summary__distance {
 	margin-left: var(--kern-metric-space-x-small);
 	color: var(--kern-color-layout-text-muted);
+	font-size: var(--kern-font-size-14);
 	font-weight: var(--kern-typography-font-weight-regular);
 }
 
 .route-summary__stretch {
+	color: var(--kern-color-layout-text-muted);
 	font-size: var(--kern-font-size-14);
 }
 </style>

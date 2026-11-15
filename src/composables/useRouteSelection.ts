@@ -53,6 +53,13 @@ export function useRouteSelection () {
 		}
 	}
 
+	/** Start and destination at once, for example the two ends of a line chosen in the legend. */
+	function chooseBoth (start: RoutePoint, destination: RoutePoint): void {
+		points.start.value = start
+		points.destination.value = destination
+		announce(`Start: ${fullName(start)}. Ziel: ${fullName(destination)}.`)
+	}
+
 	/** A start or destination dragged along the lines on the map; announced once, where it was dropped. */
 	function move (endpoint: Endpoint, point: RoutePoint): void {
 		if (choose(endpoint, point)) {
@@ -73,5 +80,5 @@ export function useRouteSelection () {
 		announce('Start und Ziel getauscht.')
 	}
 
-	return { start: points.start, destination: points.destination, clickTarget, message, choose, chooseOnMap, move, swap }
+	return { start: points.start, destination: points.destination, clickTarget, message, choose, chooseBoth, chooseOnMap, move, swap }
 }

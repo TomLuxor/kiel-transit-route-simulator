@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { planarDistance } from '../geometry'
 import { closestOnLines } from '../places'
-import { describeLines, dragPoint, formatDistance, isSamePoint, LINE_PICK_PIXELS, pickPoint, placePoint } from '../routePoints'
+import { describeLines, dragPoint, formatDistance, isSamePoint, LINE_PICK_PIXELS, lineBetween, lineEndPoints, pickPoint, placePoint } from '../routePoints'
 import { at, farFromPlaces, lines, placeById, places } from './kielNetwork'
 
 describe('names of points', () => {
@@ -68,6 +68,28 @@ describe('choosing a point with a click', () => {
 		const [x = 0, y = 0] = placeById('hauptbahnhof').coordinate
 		expect(dragPoint(lines, places, [x + 10, y], 2)).toMatchObject({ kind: 'place', id: 'hauptbahnhof' })
 		expect(dragPoint(lines, places, farFromPlaces(), 1)).toMatchObject({ kind: 'point' })
+	})
+
+	it('puts start and destination of a whole line at its ends, in the direction of its route', () => {
+		const line2 = lines.find(line => line.definition.id === '2')
+		const ends = line2 && lineEndPoints(line2, lines, places)
+		expect(ends?.start).toMatchObject({ kind: 'place', id: 'elmschenhagen' })
+		expect(ends?.destination).toMatchObject({ kind: 'place', id: 'wik' })
+		// The route text of every line names its start first.
+		for (const line of lines) {
+			const { start } = lineEndPoints(line, lines, places) ?? {}
+			if (start?.kind === 'place') {
+				expect(line.definition.route.startsWith(start.name)).toBe(true)
+			}
+		}
+	})
+
+	it('knows which line runs from one point to the other, in either direction', () => {
+		const wik = placeById('wik').coordinate
+		const elmschenhagen = placeById('elmschenhagen').coordinate
+		expect(lineBetween(lines, elmschenhagen, wik)).toBe('2')
+		expect(lineBetween(lines, wik, elmschenhagen)).toBe('2')
+		expect(lineBetween(lines, wik, placeById('hauptbahnhof').coordinate)).toBeUndefined()
 	})
 
 	it('treats a start and destination as the same if they are less than 50 m apart', () => {

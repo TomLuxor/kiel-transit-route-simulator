@@ -6,12 +6,12 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { Stroke, Style } from 'ol/style'
 
-import type { LineDefinition } from '@/data/lines'
+import type { LineDefinition, LineId } from '@/data/lines'
 import type { ResolvedLine } from '@/network/lines'
 
 import { itemAt, type Network } from '@/network/graph'
 
-import { MAP_COLORS } from './colors'
+import { fadedColor, MAP_COLORS } from './colors'
 import { SECTIONS_ATTRIBUTION } from './config'
 import { offsetPolyline } from './offset'
 
@@ -41,16 +41,18 @@ function casingStyle (lineCount: number): Style {
 
 /**
  * Lines that share a track are drawn side by side in a fixed order (the order of the line list), shifted
- * by whole line widths in screen pixels, so the offset depends on the resolution.
+ * by whole line widths in screen pixels, so the offset depends on the resolution. While one line is
+ * highlighted, the others are washed out; their white casing stays, so they remain visible as pale lines.
  */
-function trackStyles (drawing: TrackDrawing, resolution: number): Style[] {
+function trackStyles (drawing: TrackDrawing, resolution: number, highlighted: LineId | undefined): Style[] {
 	const styles = [casingStyle(drawing.lines.length)]
 	for (const [lane, line] of drawing.lines.entries()) {
 		const offsetPixels = (lane - (drawing.lines.length - 1) / 2) * LINE_WIDTH
+		const faded = highlighted !== undefined && highlighted !== line.id
 		styles.push(new Style({
 			geometry: new LineString(offsetPolyline(drawing.coordinates, offsetPixels * resolution)),
 			// Slightly wider than the lane, so that neighboring lanes leave no hairline gap.
-			stroke: new Stroke({ color: line.color, width: LINE_WIDTH + 0.5, lineCap: 'round', lineJoin: 'round' }),
+			stroke: new Stroke({ color: faded ? fadedColor(line.color) : line.color, width: LINE_WIDTH + 0.5, lineCap: 'round', lineJoin: 'round' }),
 			zIndex: 1,
 		}))
 	}
@@ -76,18 +78,29 @@ function trackDrawings (network: Network, lines: readonly ResolvedLine[]): Track
 }
 
 /** A layer with the colored lines; the badges at their ends are part of the place layer. */
-export function createLineLayer (): { layer: VectorLayer, showLines: (network: Network, lines: readonly ResolvedLine[]) => void } {
+export function createLineLayer (): {
+	layer: VectorLayer
+	showLines: (network: Network, lines: readonly ResolvedLine[]) => void
+	highlight: (lineId: LineId | undefined) => void
+} {
 	const source = new VectorSource({ attributions: SECTIONS_ATTRIBUTION })
 	const layer = new VectorLayer({ source })
+	let highlighted: LineId | undefined
 
 	function showLines (network: Network, lines: readonly ResolvedLine[]): void {
 		source.clear()
 		source.addFeatures(trackDrawings(network, lines).map(drawing => {
 			const feature = new Feature(new LineString([...drawing.coordinates]))
-			feature.setStyle((_, resolution) => trackStyles(drawing, resolution))
+			feature.setStyle((_, resolution) => trackStyles(drawing, resolution, highlighted))
 			return feature
 		}))
 	}
 
-	return { layer, showLines }
+	/** One line in full color and the others washed out; undefined shows all lines alike. */
+	function highlight (lineId: LineId | undefined): void {
+		highlighted = lineId
+		layer.changed()
+	}
+
+	return { layer, showLines, highlight }
 }

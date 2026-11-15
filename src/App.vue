@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, shallowRef, useTemplateRef } from 'vue'
+
+import type { LineId } from '@/data/lines'
 
 import LineLegend from '@/components/LineLegend.vue'
 import MapView from '@/components/MapView.vue'
@@ -12,13 +14,13 @@ import { useRouteSelection } from '@/composables/useRouteSelection'
 import { type LoadStatus, useSections } from '@/composables/useSections'
 import { MAP_PROJECTION } from '@/map/config'
 import { itemAt } from '@/network/graph'
-import { formatDistance } from '@/network/routePoints'
+import { formatDistance, lineBetween, lineEndPoints } from '@/network/routePoints'
 import { describeRoute } from '@/routing/describe'
 import { findRoute } from '@/routing/route'
 
 const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
 const model = useNetwork(sections)
-const { start, destination, clickTarget, message: selectionMessage, choose, chooseOnMap, move, swap } = useRouteSelection()
+const { start, destination, clickTarget, message: selectionMessage, choose, chooseBoth, chooseOnMap, move, swap } = useRouteSelection()
 const statusMessage = useTemplateRef<HTMLParagraphElement>('statusMessage')
 
 const network = computed(() => model.value.state === 'ready' ? model.value.network : undefined)
@@ -31,6 +33,23 @@ const route = computed(() => network.value && start.value && destination.value
 const routeDescription = computed(() => route.value && start.value && destination.value
 	? describeRoute(route.value, start.value, destination.value, lines.value, places.value)
 	: undefined)
+
+/** The line pointed at in the legend: the others are washed out on the map. */
+const highlightedLine = shallowRef<LineId>()
+
+/** The line whose two ends are start and destination, marked in the legend. */
+const selectedLineId = computed(() => start.value && destination.value
+	? lineBetween(lines.value, start.value.coordinate, destination.value.coordinate)
+	: undefined)
+
+/** A line clicked in the legend: start and destination at its two ends, in the direction of its route. */
+function chooseLine (lineId: LineId): void {
+	const line = lines.value.find(candidate => candidate.definition.id === lineId)
+	const ends = line && lineEndPoints(line, lines.value, places.value)
+	if (ends) {
+		chooseBoth(ends.start, ends.destination)
+	}
+}
 
 const ride = useRide(route, routeDescription)
 const { status: rideStatus, speed: rideSpeed, message: rideMessage, view: rideView, progress: rideProgress } = ride
@@ -164,6 +183,7 @@ function retry (): void {
 				:route="route"
 				:ride="rideView"
 				:picking="rideStatus === 'idle' || rideStatus === 'arrived'"
+				:highlighted-line="highlightedLine"
 				@pick="chooseOnMap"
 				@move="move"
 				@pan="onMapPan"
@@ -201,7 +221,12 @@ function retry (): void {
 					@resume="ride.resume"
 					@stop="ride.stop('Fahrt beendet.')"
 				/>
-				<LineLegend :lines="lines" />
+				<LineLegend
+					:lines="lines"
+					:selected-line-id="selectedLineId"
+					@highlight="highlightedLine = $event"
+					@choose="chooseLine"
+				/>
 			</aside>
 		</div>
 	</main>
@@ -331,14 +356,24 @@ function retry (): void {
 @media (min-width: 48rem), (orientation: landscape) and (min-width: 36rem) {
 	.app-content {
 		grid-template-rows: minmax(0, 1fr);
-		/* At least 18rem, so the two ride buttons fit side by side on a phone in landscape. */
-		grid-template-columns: minmax(0, 1fr) clamp(18rem, 34vw, 24rem);
+		/* At least 18rem on a phone in landscape; 26rem on laptops, see below. */
+		grid-template-columns: minmax(0, 1fr) clamp(18rem, 34vw, 26rem);
 	}
 
 	.side-panel {
 		max-height: none;
 		border-top: none;
 		border-left: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	}
+}
+
+/*
+ * Every laptop gets the full width, small ones too (34vw would be 22rem at 1024 px): "Fahrt starten" and the
+ * speed then fit in one row, even next to a Windows scrollbar (17 px).
+ */
+@media (min-width: 64rem) {
+	.app-content {
+		grid-template-columns: minmax(0, 1fr) 26rem;
 	}
 }
 
