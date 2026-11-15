@@ -195,12 +195,18 @@ watch(() => [props.highlightedLine, props.route, props.ride === undefined] as co
 /** A point just dropped after dragging it, until the selection shows it: the view then stays where the user put it. */
 let dropped: RoutePoint | undefined
 
-/** Start, destination and route, and the view on what changed. */
-function showSelection (previousStart?: RoutePoint): void {
-	const keepView = dropped !== undefined && (props.start === dropped || props.destination === dropped)
+/**
+ * Start, destination and route, and the view on what changed. The view stays where it is for a point just dropped
+ * after dragging, which the user put where they wanted it, and for a swap of start and destination, which shows the
+ * same route the other way round.
+ */
+function showSelection (previousStart?: RoutePoint, previousDestination?: RoutePoint): void {
+	const droppedHere = dropped !== undefined && (props.start === dropped || props.destination === dropped)
+	const swapped = (previousStart !== undefined || previousDestination !== undefined) &&
+		props.start === previousDestination && props.destination === previousStart
 	dropped = undefined
 	drawSelection(props.start, props.destination, props.route)
-	if (keepView) {
+	if (droppedHere || swapped) {
 		return
 	}
 	if (props.route) {
@@ -210,8 +216,8 @@ function showSelection (previousStart?: RoutePoint): void {
 	}
 }
 
-watch(() => [props.start, props.destination, props.route] as const, (_, [previousStart]) => {
-	showSelection(previousStart)
+watch(() => [props.start, props.destination, props.route] as const, (_, [previousStart, previousDestination]) => {
+	showSelection(previousStart, previousDestination)
 })
 
 /**

@@ -172,6 +172,7 @@ Pure TypeScript in `src/routing/`, independent of Vue and the map, so it can be 
   - The overview keeps a margin of 16 px on a small map (smaller side below 480 px), and 120 px more on the right for the names of the eastern line ends, which the closer view would cut off. The fit of a route is unchanged.
 
   The overview starts at zoom 11.1 to 11.4 now, the network 1.2 to 2 times as large.
+- [x] "Tauschen" keeps the view: the swapped route runs along the same way, so the map no longer fits it again and undoes the user's zoom. (It may change lines at another place, because the change is where the first line turns off.)
 - Decided: the route form stays above the line list. Choosing start and destination is the main task, it is what a phone shows first, the form, the route and the ride bar read as one flow from top to bottom, and keyboard users reach the form first. The map itself shows the lines with their colors and badges.
 - [ ] Test on a real phone in portrait and landscape.
 
