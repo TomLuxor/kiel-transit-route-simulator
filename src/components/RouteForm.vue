@@ -106,7 +106,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 						value=""
 						disabled
 					>
-						Halt wählen
+						Ort wählen
 					</option>
 					<option
 						v-if="field.point?.kind === 'point'"
