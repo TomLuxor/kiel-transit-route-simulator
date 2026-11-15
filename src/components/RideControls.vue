@@ -37,8 +37,6 @@ const MAIN_LABELS: Readonly<Record<RideStatus, string>> = {
 	arrived: 'Fahrt starten',
 }
 
-const LABELS = [...new Set(Object.values(MAIN_LABELS))]
-
 const SPEEDS = (['slow', 'normal', 'fast'] as const).map(id => ({ id, label: RIDE_SPEEDS[id].label }))
 
 const travelled = computed(() => `${formatDistance(props.progress * props.lengthMeters)} von ${formatDistance(props.lengthMeters)}`)
@@ -64,8 +62,8 @@ async function onStop (): Promise<void> {
 <template>
 	<!--
 		The end of the route block: it stays in view at the bottom of the side panel while the panel scrolls,
-		on phones too. The first row is the same in every state: the main button and the speed. "Beenden"
-		belongs to the ride under way, so it stands next to how far the ride has come.
+		on phones too. The main button and the speed are the same in every state, both as wide as the fields
+		above. "Beenden" belongs to the ride under way, so it stands next to how far the ride has come.
 	-->
 	<div
 		class="ride-controls"
@@ -73,51 +71,38 @@ async function onStop (): Promise<void> {
 		aria-label="Fahrt"
 	>
 		<div class="ride-controls__bar">
-			<div class="ride-controls__row">
-				<button
-					ref="mainButton"
-					class="kern-btn kern-btn--primary ride-controls__main"
-					type="button"
-					@click="onMain"
+			<button
+				ref="mainButton"
+				class="kern-btn kern-btn--primary ride-controls__main"
+				type="button"
+				@click="onMain"
+			>
+				<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
+			</button>
+			<!--
+				The speed as three switches side by side: every choice in view and one click away. A native radio
+				group, so the arrow keys move between them. The name "Tempo" is only read out: next to the ride
+				button, "Langsam", "Normal" and "Schnell" speak for themselves.
+			-->
+			<fieldset class="ride-controls__speed">
+				<legend class="app-visually-hidden">
+					Tempo
+				</legend>
+				<label
+					v-for="option in SPEEDS"
+					:key="option.id"
+					class="ride-controls__speed-option"
 				>
-					<!--
-						All labels in one cell, only the current one visible (and named): the button keeps the width of
-						the longest, so the speed beside it does not jump when the label changes.
-					-->
-					<span class="ride-controls__labels">
-						<span
-							v-for="label in LABELS"
-							:key="label"
-							class="kern-label"
-							:class="{ 'ride-controls__label--other': label !== MAIN_LABELS[status] }"
-						>{{ label }}</span>
-					</span>
-				</button>
-				<div class="ride-controls__speed">
-					<!-- Not shown: next to the ride button, "Langsam", "Normal" and "Schnell" speak for themselves. -->
-					<label
+					<input
+						v-model="speed"
 						class="app-visually-hidden"
-						for="ride-speed"
+						type="radio"
+						name="ride-speed"
+						:value="option.id"
 					>
-						Tempo
-					</label>
-					<div class="kern-form-input__select-wrapper">
-						<select
-							id="ride-speed"
-							v-model="speed"
-							class="kern-form-input__select"
-						>
-							<option
-								v-for="option in SPEEDS"
-								:key="option.id"
-								:value="option.id"
-							>
-								{{ option.label }}
-							</option>
-						</select>
-					</div>
-				</div>
-			</div>
+					{{ option.label }}
+				</label>
+			</fieldset>
 			<div
 				v-if="status !== 'idle'"
 				class="kern-progress ride-controls__progress"
@@ -196,44 +181,68 @@ async function onStop (): Promise<void> {
 	}
 }
 
-/*
- * The button at its own width, aligned with the fields above; the speed beside it, as one group but with room
- * to tell the two apart. When the row wraps (a narrow bar), the speed sits close below the button.
- */
-.ride-controls__row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--kern-metric-space-small) var(--kern-metric-space-x-large);
-	align-items: center;
-}
-
+/* The button across the bar, as wide as the fields above. */
 .ride-controls__main {
-	flex: none;
+	width: 100%;
 	margin: 0;
 }
 
-.ride-controls__labels {
-	display: grid;
-	justify-items: center;
-}
-
-.ride-controls__labels > * {
-	grid-area: 1 / 1;
-}
-
-.ride-controls__label--other {
-	visibility: hidden;
-}
-
+/* Three switches of equal width in one frame, the one chosen marked by a tint, a frame of its own and bold text. */
 .ride-controls__speed {
-	display: flex;
-	gap: var(--kern-metric-space-small);
-	align-items: center;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	border-radius: var(--kern-metric-border-radius-default);
 }
 
-/* Wide enough for "Langsam" next to KERN's arrow. */
-.ride-controls__speed .kern-form-input__select-wrapper {
-	width: 8rem;
+.ride-controls__speed-option {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 2.5rem;
+	padding: 0 var(--kern-metric-space-x-small);
+	color: var(--kern-color-layout-text-default);
+	cursor: pointer;
+}
+
+.ride-controls__speed-option + .ride-controls__speed-option {
+	border-left: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+}
+
+.ride-controls__speed-option:first-of-type {
+	border-radius: var(--kern-metric-border-radius-default) 0 0 var(--kern-metric-border-radius-default);
+}
+
+.ride-controls__speed-option:last-of-type {
+	border-radius: 0 var(--kern-metric-border-radius-default) var(--kern-metric-border-radius-default) 0;
+}
+
+.ride-controls__speed-option:hover {
+	background: var(--kern-color-action-state-indicator-tint-hover-opacity);
+}
+
+.ride-controls__speed-option:has(:checked) {
+	color: var(--kern-color-action-default);
+	font-weight: var(--kern-typography-font-weight-semi-bold);
+	background: var(--kern-color-action-state-indicator-tint-hover-opacity);
+	outline: 2px solid var(--kern-color-action-default);
+	outline-offset: -2px;
+}
+
+.ride-controls__speed-option:has(:focus-visible) {
+	position: relative;
+	z-index: 1;
+	outline: var(--app-focus-outline);
+	outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+	.ride-controls__speed-option:has(:checked) {
+		outline-color: Highlight;
+	}
 }
 
 .ride-controls__progress {
@@ -260,14 +269,10 @@ async function onStop (): Promise<void> {
 }
 
 /*
- * A narrow bar (a phone in landscape): the button spans the row and the speed sits below it; "Beenden"
- * stays beside the distance, and screen readers still hear "Gefahren".
+ * A narrow bar (a phone in landscape): "Beenden" stays beside the distance, and screen readers still hear
+ * "Gefahren".
  */
-@container ride-controls (width < 22rem) {
-	.ride-controls__main {
-		flex: 1 0 100%;
-	}
-
+@container ride-controls (width < 18.5rem) {
 	.ride-controls__progress-prefix {
 		position: absolute;
 		width: 1px;
