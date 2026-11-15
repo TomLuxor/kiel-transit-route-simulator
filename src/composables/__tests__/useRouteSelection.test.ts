@@ -43,6 +43,20 @@ describe('choosing start and destination', () => {
 		expect(selection.message.value).toBe('Dort liegt schon der Start. Bitte ein anderes Ziel wählen.')
 	})
 
+	it('moves a dragged endpoint and says where it was dropped, without touching the click target', () => {
+		const selection = useRouteSelection()
+		selection.choose('start', a)
+		selection.choose('destination', b)
+		selection.move('start', c)
+		expect(selection.start.value).toBe(c)
+		expect(selection.clickTarget.value).toBe('destination')
+		expect(selection.message.value).toBe('Start: C.')
+		// Onto the other endpoint it is refused like any other choice.
+		selection.move('destination', c)
+		expect(selection.destination.value).toBe(b)
+		expect(selection.message.value).toBe('Dort liegt schon der Start. Bitte ein anderes Ziel wählen.')
+	})
+
 	it('swaps start and destination and then targets the empty one', () => {
 		const selection = useRouteSelection()
 		selection.choose('start', a)

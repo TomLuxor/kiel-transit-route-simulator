@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import type { Coordinate } from 'ol/coordinate'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
 
 import 'ol/ol.css'
 import { equals } from 'ol/coordinate'
 import { boundingExtent, buffer, containsCoordinate } from 'ol/extent'
+import { defaults as defaultInteractions } from 'ol/interaction/defaults'
+import PointerInteraction from 'ol/interaction/Pointer'
 import OlMap from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
 import View from 'ol/View'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
 import type { RideView } from '@/composables/useRide'
+import type { Endpoint } from '@/composables/useRouteSelection'
 import type { Network } from '@/network/graph'
 import type { ResolvedLine } from '@/network/lines'
 import type { ResolvedPlace } from '@/network/places'
-import type { Route } from '@/routing/route'
 
 import { LINES } from '@/data/lines'
 import { INITIAL_ZOOM, KIEL_CENTER, MAP_PROJECTION } from '@/map/config'
@@ -24,7 +27,8 @@ import { animationDuration } from '@/map/motion'
 import { createPlaceLayer } from '@/map/placeLayer'
 import { createRouteLayer, DIMMED_LINE_OPACITY } from '@/map/routeLayer'
 import { createSelectionLayer } from '@/map/selectionLayer'
-import { pickPoint, type RoutePoint } from '@/network/routePoints'
+import { dragPoint, isSamePoint, pickPoint, type RoutePoint } from '@/network/routePoints'
+import { findRoute, type Route } from '@/routing/route'
 
 const props = defineProps<{
 	network: Network | undefined
@@ -41,6 +45,8 @@ const props = defineProps<{
 const emit = defineEmits<{
 	/** A click on the map: the chosen point, or undefined if the click was too far from every line. */
 	pick: [point: RoutePoint | undefined]
+	/** The start or destination was dragged along the lines to `point` and dropped there. */
+	move: [endpoint: Endpoint, point: RoutePoint]
 	/** The user drags the map. */
 	pan: []
 }>()
@@ -53,6 +59,9 @@ const REVEAL_MARGIN_PIXELS = 16
 
 /** Zoom level while following the vehicle: streets and place names are readable. */
 const RIDE_ZOOM = 15
+
+/** How far around the start and destination markers a press grabs them, in pixels; more for a fingertip. */
+const GRAB_TOLERANCE_PIXELS = { mouse: 4, touch: 12 }
 
 // The ref key must differ from every script variable (here `map`), or Vue cannot set it.
 const mapElement = useTemplateRef<HTMLDivElement>('mapTarget')
@@ -115,12 +124,25 @@ function fitRoute (): void {
 	}
 }
 
-/** Start, destination and route: markers, the route over the dimmed lines, and the view on what changed. */
+/** Markers for start, destination and changes, and the route over the dimmed lines. */
+function drawSelection (start: RoutePoint | undefined, destination: RoutePoint | undefined, route: Route | undefined): void {
+	const changes = (route?.legs ?? []).slice(1).map(leg => leg.coordinates[0]).filter(coordinate => coordinate !== undefined)
+	selectionLayer.showSelection(start, destination, changes)
+	routeLayer.showRoute(route)
+	lineLayer.layer.setOpacity(route ? DIMMED_LINE_OPACITY : 1)
+}
+
+/** A point just dropped after dragging it, until the selection shows it: the view then stays where the user put it. */
+let dropped: RoutePoint | undefined
+
+/** Start, destination and route, and the view on what changed. */
 function showSelection (previousStart?: RoutePoint): void {
-	const changes = (props.route?.legs ?? []).slice(1).map(leg => leg.coordinates[0]).filter(coordinate => coordinate !== undefined)
-	selectionLayer.showSelection(props.start, props.destination, changes)
-	routeLayer.showRoute(props.route)
-	lineLayer.layer.setOpacity(props.route ? DIMMED_LINE_OPACITY : 1)
+	const keepView = dropped !== undefined && (props.start === dropped || props.destination === dropped)
+	dropped = undefined
+	drawSelection(props.start, props.destination, props.route)
+	if (keepView) {
+		return
+	}
 	if (props.route) {
 		fitRoute()
 	} else {
@@ -132,6 +154,74 @@ watch(() => [props.start, props.destination, props.route] as const, (_, [previou
 	showSelection(previousStart)
 })
 
+/** The start or destination being dragged, and where it is now; undefined while nothing is dragged. */
+let drag: { endpoint: Endpoint, point: RoutePoint | undefined } | undefined
+/** The last press was on the start or destination, so the click it makes chooses nothing. */
+let grabbed = false
+
+/** The start or destination marker under the pointer, if points can be chosen at all. */
+function endpointAt (event: MapBrowserEvent): Endpoint | undefined {
+	const touch = event.originalEvent instanceof PointerEvent && event.originalEvent.pointerType === 'touch'
+	return map && props.picking ? selectionLayer.endpointAt(map, event.pixel, GRAB_TOLERANCE_PIXELS[touch ? 'touch' : 'mouse']) : undefined
+}
+
+/** While dragging: the marker slides along the lines, and the route follows; the form only learns of it on drop. */
+function previewDrag (coordinate: Coordinate): void {
+	const resolution = map?.getView().getResolution()
+	if (!drag || !props.network || resolution === undefined) {
+		return
+	}
+	const point = dragPoint(props.lines, props.places, coordinate, resolution)
+	const other = drag.endpoint === 'start' ? props.destination : props.start
+	// Where the other endpoint is, the marker stops, as a choice there would be refused.
+	if (!point || point.id === drag.point?.id || (other && isSamePoint(point, other))) {
+		return
+	}
+	drag.point = point
+	const [start, destination] = drag.endpoint === 'start' ? [point, other] : [other, point]
+	drawSelection(start, destination, start && destination ? findRoute(props.network, props.lines, start.coordinate, destination.coordinate) : undefined)
+}
+
+function endDrag (): void {
+	const finished = drag
+	drag = undefined
+	mapElement.value?.classList.remove('map--dragging')
+	if (!finished) {
+		return
+	}
+	const before = finished.endpoint === 'start' ? props.start : props.destination
+	if (finished.point && finished.point.id !== before?.id) {
+		dropped = finished.point
+		emit('move', finished.endpoint, finished.point)
+	} else {
+		drawSelection(props.start, props.destination, props.route)
+		drawRide(props.ride)
+	}
+}
+
+/** Pressing on the start or destination and moving drags it along the lines, instead of moving the map. */
+const markerDrag = new PointerInteraction({
+	handleDownEvent: event => {
+		const endpoint = endpointAt(event)
+		grabbed = endpoint !== undefined
+		if (!endpoint) {
+			return false
+		}
+		drag = { endpoint, point: endpoint === 'start' ? props.start : props.destination }
+		// After a ride, the vehicle would stay at the old destination.
+		selectionLayer.showVehicle(undefined)
+		mapElement.value?.classList.add('map--dragging')
+		return true
+	},
+	handleDragEvent: event => {
+		previewDrag(event.coordinate)
+	},
+	handleUpEvent: () => {
+		endDrag()
+		return false
+	},
+})
+
 /** With reduced motion, the view shows one leg at a time, without animation. */
 function fitLeg (legIndex: number): void {
 	const leg = props.route?.legs[legIndex]
@@ -140,23 +230,35 @@ function fitLeg (legIndex: number): void {
 	}
 }
 
+/** The vehicle and the part of the route travelled. */
+function drawRide (ride: RideView | undefined): void {
+	const line = LINES.find(candidate => candidate.id === ride?.lineId)
+	selectionLayer.showVehicle(ride && line ? { coordinate: ride.position.coordinate, line } : undefined)
+	routeLayer.showTravelled(ride?.position.travelled ?? [])
+}
+
+/** The route the current ride runs on. */
+let rideRoute: Route | undefined
+
 /**
  * The vehicle and the part travelled on every frame. The view zooms to the start, then follows the vehicle;
  * with reduced motion it jumps from leg to leg instead. When the ride ends, it shows the whole route again.
  */
 function showRide (ride: RideView | undefined, previous: RideView | undefined): void {
-	const line = LINES.find(candidate => candidate.id === ride?.lineId)
-	selectionLayer.showVehicle(ride && line ? { coordinate: ride.position.coordinate, line } : undefined)
-	routeLayer.showTravelled(ride?.position.travelled ?? [])
+	drawRide(ride)
 	const view = map?.getView()
 	if (!view) {
 		return
 	}
 	if (!ride) {
-		if (previous) {
+		// A ride ended by a new start or destination leaves the view to showSelection.
+		if (previous && props.route === rideRoute) {
 			fitRoute()
 		}
 		return
+	}
+	if (!previous) {
+		rideRoute = props.route
 	}
 	if (ride.stepped) {
 		if (previous?.state.legIndex !== ride.state.legIndex) {
@@ -177,6 +279,10 @@ onMounted(() => {
 		controls: createControls().extend([createFitControl(() => {
 			fitNetwork(animationDuration(600))
 		})]),
+		// The map's own defaults pan and zoom with the mouse wheel only while the map has the focus, because it has a
+		// tabindex; in an app that is all map, it should react at once. Marker dragging comes last, so it sees a
+		// press before panning does.
+		interactions: defaultInteractions().extend([markerDrag]),
 		layers: [createBackgroundLayer(), lineLayer.layer, routeLayer.layer, placeLayer.layer, selectionLayer.layer],
 		view: new View({
 			projection: MAP_PROJECTION,
@@ -186,17 +292,21 @@ onMounted(() => {
 	})
 	// "singleclick" waits until a double click (zoom) is ruled out.
 	map.on('singleclick', event => {
-		if (props.picking && props.lines.length > 0) {
+		if (props.picking && props.lines.length > 0 && !grabbed) {
 			emit('pick', pointAt(event.coordinate))
 		}
 	})
 	map.on('pointermove', event => {
 		if (!event.dragging) {
-			mapElement.value?.classList.toggle('map--pickable', props.picking && pointAt(event.coordinate) !== undefined)
+			const draggable = endpointAt(event) !== undefined
+			mapElement.value?.classList.toggle('map--draggable', draggable)
+			mapElement.value?.classList.toggle('map--pickable', !draggable && props.picking && pointAt(event.coordinate) !== undefined)
 		}
 	})
 	map.on('pointerdrag', () => {
-		emit('pan')
+		if (!drag) {
+			emit('pan')
+		}
 	})
 	showNetwork()
 	showSelection(props.start)
@@ -223,7 +333,8 @@ onBeforeUnmount(() => {
 			id="map-help"
 			class="kern-sr-only"
 		>
-			Ein Klick oder Tippen auf eine Linie wählt Start oder Ziel; das Formular „Start und Ziel“ bietet dieselbe Auswahl per Tastatur.
+			Ein Klick oder Tippen auf eine Linie wählt Start oder Ziel; mit gedrückter Maustaste oder gedrücktem Finger lassen sie sich entlang der Linien verschieben.
+			Das Formular „Start und Ziel“ bietet dieselbe Auswahl per Tastatur.
 			Wenn die Karte den Fokus hat, verschieben die Pfeiltasten die Karte, Plus und Minus zoomen.
 		</p>
 	</div>
@@ -249,9 +360,17 @@ onBeforeUnmount(() => {
 	height: 100%;
 }
 
-/* Over a line, the pointer shows that a click chooses a point there. */
+/* Over a line, the pointer shows that a click chooses a point there; over start or destination, that they can be dragged. */
 .map--pickable {
 	cursor: pointer;
+}
+
+.map--draggable {
+	cursor: grab;
+}
+
+.map--dragging {
+	cursor: grabbing;
 }
 
 /*

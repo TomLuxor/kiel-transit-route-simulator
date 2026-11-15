@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { planarDistance } from '../geometry'
 import { closestOnLines } from '../places'
-import { describeLines, formatDistance, isSamePoint, LINE_PICK_PIXELS, pickPoint, placePoint } from '../routePoints'
+import { describeLines, dragPoint, formatDistance, isSamePoint, LINE_PICK_PIXELS, pickPoint, placePoint } from '../routePoints'
 import { at, farFromPlaces, lines, placeById, places } from './kielNetwork'
 
 describe('names of points', () => {
@@ -52,6 +52,22 @@ describe('choosing a point with a click', () => {
 		expect(distance).toBeGreaterThan(0)
 		expect(pickPoint(lines, places, click, distance / (LINE_PICK_PIXELS - 1))).toBeDefined()
 		expect(pickPoint(lines, places, click, distance / (LINE_PICK_PIXELS + 1))).toBeUndefined()
+	})
+
+	it('keeps a dragged point on the nearest line, however far the pointer strays', () => {
+		const pointer = at(10.10, 54.34)
+		const position = closestOnLines(lines, pointer)
+		const distance = position ? planarDistance(position.coordinate, pointer) : 0
+		// Far beyond the reach of a click.
+		const resolution = distance / (LINE_PICK_PIXELS * 10)
+		expect(pickPoint(lines, places, pointer, resolution)).toBeUndefined()
+		expect(dragPoint(lines, places, pointer, resolution)?.coordinate).toEqual(position?.coordinate)
+	})
+
+	it('drops a dragged point onto a place when it passes over its dot', () => {
+		const [x = 0, y = 0] = placeById('hauptbahnhof').coordinate
+		expect(dragPoint(lines, places, [x + 10, y], 2)).toMatchObject({ kind: 'place', id: 'hauptbahnhof' })
+		expect(dragPoint(lines, places, farFromPlaces(), 1)).toMatchObject({ kind: 'point' })
 	})
 
 	it('treats a start and destination as the same if they are less than 50 m apart', () => {

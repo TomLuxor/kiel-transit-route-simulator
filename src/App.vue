@@ -18,7 +18,7 @@ import { findRoute } from '@/routing/route'
 
 const { sections, status: loadStatus, errorMessage: loadError, load } = useSections(MAP_PROJECTION)
 const model = useNetwork(sections)
-const { start, destination, clickTarget, message: selectionMessage, choose, chooseOnMap, swap } = useRouteSelection()
+const { start, destination, clickTarget, message: selectionMessage, choose, chooseOnMap, move, swap } = useRouteSelection()
 const statusMessage = useTemplateRef<HTMLParagraphElement>('statusMessage')
 
 const network = computed(() => model.value.state === 'ready' ? model.value.network : undefined)
@@ -165,6 +165,7 @@ function retry (): void {
 				:ride="rideView"
 				:picking="rideStatus === 'idle' || rideStatus === 'arrived'"
 				@pick="chooseOnMap"
+				@move="move"
 				@pan="onMapPan"
 			/>
 			<!-- Focusable, because on small screens the panel scrolls and must be scrollable by keyboard. -->
@@ -349,8 +350,6 @@ function retry (): void {
 @media (max-width: 47.99rem), (max-height: 37.5rem) {
 	.side-panel--riding .route-form,
 	.side-panel--riding .line-legend,
-	.side-panel--riding :deep(.route-summary__title),
-	.side-panel--riding :deep(.route-summary__total),
 	.side-panel--riding :deep(.route-summary__leg:not([aria-current])) {
 		display: none;
 	}

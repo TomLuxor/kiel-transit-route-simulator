@@ -105,6 +105,15 @@ export function routePointAt (lines: readonly ResolvedLine[], places: readonly R
 	return place && place.distance < SAME_PLACE_METERS ? placePoint(place.place) : linePoint(position, places)
 }
 
+/** The place whose dot is at `coordinate` on the screen, else the point at `position` on a line. */
+function pointNear (position: LinePosition, places: readonly ResolvedPlace[], coordinate: Coordinate, resolution: number): RoutePoint {
+	const place = nearestPlace(places, coordinate, planarDistance)
+	if (place && place.distance / resolution <= PLACE_PICK_PIXELS) {
+		return placePoint(place.place)
+	}
+	return linePoint(position, places)
+}
+
 /**
  * What a click at `coordinate` chooses at the given map resolution: the place next to the click, else the
  * nearest point on a line, or undefined if the click is too far from every line.
@@ -114,9 +123,14 @@ export function pickPoint (lines: readonly ResolvedLine[], places: readonly Reso
 	if (!position || planarDistance(position.coordinate, coordinate) / resolution > LINE_PICK_PIXELS) {
 		return undefined
 	}
-	const place = nearestPlace(places, coordinate, planarDistance)
-	if (place && place.distance / resolution <= PLACE_PICK_PIXELS) {
-		return placePoint(place.place)
-	}
-	return linePoint(position, places)
+	return pointNear(position, places, coordinate, resolution)
+}
+
+/**
+ * Where a start or destination dragged to `coordinate` goes: onto the nearest line, however far the pointer
+ * strays from it, so the marker slides along the line; onto a place when it passes over the place's dot.
+ */
+export function dragPoint (lines: readonly ResolvedLine[], places: readonly ResolvedPlace[], coordinate: Coordinate, resolution: number): RoutePoint | undefined {
+	const position = closestOnLines(lines, coordinate)
+	return position && pointNear(position, places, position.coordinate, resolution)
 }

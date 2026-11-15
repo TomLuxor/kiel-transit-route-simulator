@@ -1,11 +1,14 @@
 import type { Coordinate } from 'ol/coordinate'
+import type OlMap from 'ol/Map'
+import type { Pixel } from 'ol/pixel'
 
-import Feature from 'ol/Feature'
+import Feature, { type FeatureLike } from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { Circle, Fill, Icon, Stroke, Style, Text } from 'ol/style'
 
+import type { Endpoint } from '@/composables/useRouteSelection'
 import type { LineDefinition, LineId } from '@/data/lines'
 import type { RoutePoint } from '@/network/routePoints'
 
@@ -78,24 +81,41 @@ export function createSelectionLayer (): {
 	layer: VectorLayer
 	showSelection: (start: RoutePoint | undefined, destination: RoutePoint | undefined, changes: readonly Coordinate[]) => void
 	showVehicle: (vehicle: { coordinate: Coordinate, line: LineDefinition } | undefined) => void
+	endpointAt: (map: OlMap, pixel: Pixel, hitTolerance: number) => Endpoint | undefined
 } {
 	const source = new VectorSource()
 	const layer = new VectorLayer({ source, className: 'ol-layer route-markers' })
 	let markers: Feature[] = []
+	/** The start and destination markers, for dragging them; not their name boxes, which are features of their own. */
+	const endpoints = new Map<FeatureLike, Endpoint>()
 	let vehicle: Feature<Point> | undefined
 
 	function showSelection (start: RoutePoint | undefined, destination: RoutePoint | undefined, changes: readonly Coordinate[]): void {
 		for (const feature of markers) {
 			source.removeFeature(feature)
 		}
-		// Added in drawing order: changes below start and destination.
+		endpoints.clear()
+		// Added in drawing order: changes below start and destination, the name boxes above all markers.
 		markers = changes.map(change => marker(change, MARKER_STYLES.change))
-		for (const [point, style] of [[start, MARKER_STYLES.start], [destination, MARKER_STYLES.destination]] as const) {
+		const chosen = [['start', start], ['destination', destination]] as const
+		for (const [endpoint, point] of chosen) {
 			if (point) {
-				markers.push(marker(point.coordinate, point.nearby ? [...style, nearbyStyle(point.nearby)] : style))
+				const feature = marker(point.coordinate, MARKER_STYLES[endpoint])
+				endpoints.set(feature, endpoint)
+				markers.push(feature)
+			}
+		}
+		for (const [, point] of chosen) {
+			if (point?.nearby) {
+				markers.push(marker(point.coordinate, [nearbyStyle(point.nearby)]))
 			}
 		}
 		source.addFeatures(markers)
+	}
+
+	/** The start or destination marker at a pixel, or undefined; the vehicle and the change markers do not count. */
+	function endpointAt (map: OlMap, pixel: Pixel, hitTolerance: number): Endpoint | undefined {
+		return map.forEachFeatureAtPixel(pixel, feature => endpoints.get(feature), { layerFilter: candidate => candidate === layer, hitTolerance })
 	}
 
 	/** Called on every animation frame during a ride, so it moves the one vehicle feature instead of replacing it. */
@@ -116,5 +136,5 @@ export function createSelectionLayer (): {
 		vehicle.setStyle(vehicleStyle(next.line))
 	}
 
-	return { layer, showSelection, showVehicle }
+	return { layer, showSelection, showVehicle, endpointAt }
 }

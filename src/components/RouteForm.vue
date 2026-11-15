@@ -50,14 +50,15 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 		aria-labelledby="route-form-title"
 		@submit.prevent
 	>
+		<!-- Not shown, but it names the form and lets screen reader users jump to it. -->
 		<h2
 			id="route-form-title"
-			class="route-form__title"
+			class="app-visually-hidden"
 		>
 			Start und Ziel
 		</h2>
 		<p class="route-form__intro">
-			Start und Ziel aus den Listen wählen oder in der Karte auf eine Linie klicken oder tippen.
+			Start und Ziel in der Karte auf eine Linie setzen, dann die Fahrt starten.
 		</p>
 		<div
 			v-for="field in fields"
@@ -134,7 +135,7 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 						value=""
 						disabled
 					>
-						Ort wählen
+						Halt wählen
 					</option>
 					<option
 						v-if="field.point?.kind === 'point'"
@@ -193,12 +194,6 @@ async function onChange (endpoint: Endpoint, event: Event): Promise<void> {
 .route-form {
 	display: grid;
 	gap: var(--kern-metric-space-default);
-}
-
-.route-form__title {
-	margin: 0;
-	font-size: var(--kern-typography-font-size-medium-static);
-	font-weight: var(--kern-typography-font-weight-semi-bold);
 }
 
 .route-form__intro,

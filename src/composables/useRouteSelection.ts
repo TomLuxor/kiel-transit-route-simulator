@@ -15,7 +15,7 @@ export const ENDPOINT_WORDS: Readonly<Record<Endpoint, { title: string, nominati
 }
 
 /**
- * Start and destination of the ride, chosen in the form or with a click on the map.
+ * Start and destination of the ride, chosen in the form or with a click on the map, and dragged along the lines.
  *
  * A map click sets the endpoint in `clickTarget`. When one endpoint is set while the other is still empty,
  * the target moves on to the empty one, so that two clicks choose start and destination.
@@ -53,6 +53,13 @@ export function useRouteSelection () {
 		}
 	}
 
+	/** A start or destination dragged along the lines on the map; announced once, where it was dropped. */
+	function move (endpoint: Endpoint, point: RoutePoint): void {
+		if (choose(endpoint, point)) {
+			announce(`${ENDPOINT_WORDS[endpoint].title}: ${fullName(point)}.`)
+		}
+	}
+
 	function swap (): void {
 		const { start, destination } = points
 		const previousStart = start.value
@@ -66,5 +73,5 @@ export function useRouteSelection () {
 		announce('Start und Ziel getauscht.')
 	}
 
-	return { start: points.start, destination: points.destination, clickTarget, message, choose, chooseOnMap, swap }
+	return { start: points.start, destination: points.destination, clickTarget, message, choose, chooseOnMap, move, swap }
 }
