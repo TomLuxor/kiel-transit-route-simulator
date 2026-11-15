@@ -263,7 +263,7 @@ async function onStop (): Promise<void> {
  * A narrow bar (a phone in landscape): the button spans the row and the speed sits below it; "Beenden"
  * stays beside the distance, and screen readers still hear "Gefahren".
  */
-@container ride-controls (width < 18.5rem) {
+@container ride-controls (width < 22rem) {
 	.ride-controls__main {
 		flex: 1 0 100%;
 	}
