@@ -37,6 +37,8 @@ const MAIN_LABELS: Readonly<Record<RideStatus, string>> = {
 	arrived: 'Fahrt starten',
 }
 
+const LABELS = [...new Set(Object.values(MAIN_LABELS))]
+
 const SPEEDS = (['slow', 'normal', 'fast'] as const).map(id => ({ id, label: RIDE_SPEEDS[id].label }))
 
 const travelled = computed(() => `${formatDistance(props.progress * props.lengthMeters)} von ${formatDistance(props.lengthMeters)}`)
@@ -78,7 +80,18 @@ async function onStop (): Promise<void> {
 					type="button"
 					@click="onMain"
 				>
-					<span class="kern-label">{{ MAIN_LABELS[status] }}</span>
+					<!--
+						All labels in one cell, only the current one visible (and named): the button keeps the width of
+						the longest, so the speed beside it does not jump when the label changes.
+					-->
+					<span class="ride-controls__labels">
+						<span
+							v-for="label in LABELS"
+							:key="label"
+							class="kern-label"
+							:class="{ 'ride-controls__label--other': label !== MAIN_LABELS[status] }"
+						>{{ label }}</span>
+					</span>
 				</button>
 				<div class="ride-controls__speed">
 					<!-- Not shown: next to the ride button, "Langsam", "Normal" and "Schnell" speak for themselves. -->
@@ -183,7 +196,7 @@ async function onStop (): Promise<void> {
 	}
 }
 
-/* The button at its own width, aligned with the fields above; the speed at the right edge. */
+/* The button at its own width, aligned with the fields above; the speed right beside it, as one group. */
 .ride-controls__row {
 	display: flex;
 	flex-wrap: wrap;
@@ -196,11 +209,23 @@ async function onStop (): Promise<void> {
 	margin: 0;
 }
 
+.ride-controls__labels {
+	display: grid;
+	justify-items: center;
+}
+
+.ride-controls__labels > * {
+	grid-area: 1 / 1;
+}
+
+.ride-controls__label--other {
+	visibility: hidden;
+}
+
 .ride-controls__speed {
 	display: flex;
 	gap: var(--kern-metric-space-small);
 	align-items: center;
-	margin-left: auto;
 }
 
 /* Wide enough for "Langsam" next to KERN's arrow. */
