@@ -140,43 +140,46 @@ function retry (): void {
 		</p>
 	</header>
 	<main class="app-main">
-		<!-- Only while loading or after an error; once the network is loaded, the message is left for screen readers. -->
-		<div
-			class="status-bar"
-			:class="[`status-bar--${status}`, { 'app-visually-hidden': status === 'ready' }]"
-		>
-			<span
-				v-if="status === 'loading'"
-				class="kern-loader kern-loader--visible status-bar__loader"
-				aria-hidden="true"
-			/>
-			<span
-				v-else-if="status === 'error'"
-				class="kern-icon kern-icon--danger status-bar__icon"
-				aria-hidden="true"
-			/>
-			<p
-				ref="statusMessage"
-				class="status-bar__message"
-				role="status"
-				tabindex="-1"
-			>
-				{{ statusText }}
-			</p>
-			<button
-				v-if="status === 'error'"
-				class="kern-btn kern-btn--secondary kern-btn--small"
-				type="button"
-				@click="retry"
+		<div class="app-content">
+			<!--
+				On top of the map, only while loading or after an error; once the network is loaded, the message is left
+				for screen readers. Not above the map, where the content would move up when it goes.
+			-->
+			<div
+				class="status-bar"
+				:class="[`status-bar--${status}`, { 'app-visually-hidden': status === 'ready' }]"
 			>
 				<span
-					class="kern-icon kern-icon--autorenew"
+					v-if="status === 'loading'"
+					class="kern-loader kern-loader--visible status-bar__loader"
 					aria-hidden="true"
 				/>
-				<span class="kern-label">Erneut versuchen</span>
-			</button>
-		</div>
-		<div class="app-content">
+				<span
+					v-else-if="status === 'error'"
+					class="kern-icon kern-icon--danger status-bar__icon"
+					aria-hidden="true"
+				/>
+				<p
+					ref="statusMessage"
+					class="status-bar__message"
+					role="status"
+					tabindex="-1"
+				>
+					{{ statusText }}
+				</p>
+				<button
+					v-if="status === 'error'"
+					class="kern-btn kern-btn--secondary kern-btn--small"
+					type="button"
+					@click="retry"
+				>
+					<span
+						class="kern-icon kern-icon--autorenew"
+						aria-hidden="true"
+					/>
+					<span class="kern-label">Erneut versuchen</span>
+				</button>
+			</div>
 			<MapView
 				:network="network"
 				:lines="lines"
@@ -297,30 +300,45 @@ function retry (): void {
 
 .app-main {
 	display: grid;
-	grid-template-rows: auto 1fr;
+	grid-template-rows: minmax(0, 1fr);
 	min-height: 0;
+}
+
+/*
+ * In the grid cell of the map, on top of it: at the top, centered between the zoom buttons (left) and the rotate
+ * button (right), where the map hint appears once the network is loaded.
+ */
+.app-content > .map-view,
+.status-bar {
+	grid-area: 1 / 1;
 }
 
 .status-bar {
+	z-index: 1;
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--kern-metric-space-small) var(--kern-metric-space-default);
+	gap: var(--kern-metric-space-small);
 	align-items: center;
-	min-height: 44px;
-	padding: var(--kern-metric-space-x-small) var(--kern-metric-space-default);
-	background: var(--kern-color-layout-background-hued);
-	border-bottom: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	align-self: start;
+	justify-self: center;
+	margin: var(--kern-metric-space-small) calc(2 * var(--kern-metric-space-small) + 44px) 0;
+	padding: var(--kern-metric-space-x-small) var(--kern-metric-space-small);
+	background: var(--kern-color-layout-background-default);
+	border: var(--kern-metric-border-width-light) solid var(--kern-color-layout-border);
+	border-radius: var(--kern-metric-border-radius-default);
+	box-shadow: var(--kern-shadow-elevation-low);
 }
 
-/* Hidden once the network is loaded (with app-visually-hidden); its own size would keep it 44 px high. */
+/* Hidden once the network is loaded (with app-visually-hidden), down to its 1 px. */
 .status-bar--ready {
-	min-height: 0;
+	margin: 0;
 	padding: 0;
 	border: 0;
 }
 
+/* Beside the icon even on a phone (12rem fit there), the button below them. */
 .status-bar__message {
-	flex: 1 1 16rem;
+	flex: 1 1 12rem;
 	margin: 0;
 }
 
@@ -336,8 +354,6 @@ function retry (): void {
 
 /* Map and side panel: side by side on laptops and phones in landscape, the panel below the map in portrait. */
 .app-content {
-	/* Row 2 also when the status bar is hidden and takes no row. */
-	grid-row: 2;
 	display: grid;
 	grid-template-rows: minmax(0, 1fr) auto;
 	min-height: 0;
