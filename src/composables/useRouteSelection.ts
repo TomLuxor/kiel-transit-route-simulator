@@ -24,8 +24,8 @@ export function useRouteSelection () {
 	const points = { start: shallowRef<RoutePoint>(), destination: shallowRef<RoutePoint>() }
 	const clickTarget = ref<Endpoint>('start')
 	/**
-	 * For a live region: what a map click chose (read out only, the form and the map show it), or why a choice
-	 * was not taken (shown as well, as nothing else on the page tells).
+	 * For a live region: what a map click chose or missed (read out only, the form and the map show it), or why
+	 * a choice was not taken (shown as well, as nothing else on the page tells).
 	 */
 	const { message, shown: messageShown, announce, clear } = useAnnouncer()
 
@@ -44,10 +44,13 @@ export function useRouteSelection () {
 		return true
 	}
 
-	/** A map click: `point` is undefined if the click was too far from every line. */
+	/**
+	 * A map click: `point` is undefined if the click was too far from every line. Such a miss is only read out:
+	 * on the map, nothing happening says enough.
+	 */
 	function chooseOnMap (point: RoutePoint | undefined): void {
 		if (!point) {
-			announce('Dort ist keine Linie. Bitte näher an einer Linie klicken oder tippen.', { shown: true })
+			announce('Dort ist keine Linie.')
 			return
 		}
 		const endpoint = clickTarget.value

@@ -54,7 +54,7 @@ function onFocus (event: FocusEvent, lineId: LineId): void {
 				id="line-legend-hint"
 				class="line-legend__hint"
 			>
-				Eine Linie wählen, um sie von Ende zu Ende zu fahren.
+				Klicke eine Linie, um sie von Ende zu Ende zu fahren.
 			</p>
 			<ul class="line-legend__list">
 				<li

@@ -76,12 +76,13 @@ describe('choosing start and destination', () => {
 		expect(selection.clickTarget.value).toBe('start')
 	})
 
-	it('shows only what the page does not show anyway: a refusal or a miss, not a confirmation', () => {
+	it('shows only what the page does not show anyway: a refusal, not a confirmation or a miss', () => {
 		const selection = useRouteSelection()
 		selection.chooseOnMap(a)
 		expect(selection.messageShown.value).toBe(false)
 		selection.chooseOnMap(undefined)
-		expect(selection.messageShown.value).toBe(true)
+		expect(selection.message.value).toBe('Dort ist keine Linie.')
+		expect(selection.messageShown.value).toBe(false)
 		expect(selection.choose('destination', a)).toBe(false)
 		expect(selection.messageShown.value).toBe(true)
 		// A valid choice in the form removes the refusal, without a word of its own.
